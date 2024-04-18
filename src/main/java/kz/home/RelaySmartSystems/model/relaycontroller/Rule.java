@@ -24,9 +24,9 @@ public class Rule {
     @JoinColumn(name = "input_uuid", nullable=false)
     @ManyToOne(optional = false)
     private Input input;
-    @OneToMany(mappedBy = "rule")
+    @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
     private List<Action> actions;
-    @OneToMany(mappedBy = "rule")
+    @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
     private List<Acl> acls;
 
     public String getEvent() {

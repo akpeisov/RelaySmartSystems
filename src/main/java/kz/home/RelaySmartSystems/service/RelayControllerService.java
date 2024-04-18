@@ -1,10 +1,7 @@
 package kz.home.RelaySmartSystems.service;
 
 import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.relaycontroller.Input;
-import kz.home.RelaySmartSystems.model.relaycontroller.Output;
-import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
-import kz.home.RelaySmartSystems.model.relaycontroller.Rule;
+import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import org.springframework.stereotype.Service;
 
@@ -54,17 +51,41 @@ public class RelayControllerService {
             for (Input input : relayController.getInputs()) {
                 Input newInput = new Input();
                 BeanUtils.copyProperties(newInput, input);
+                newInput.setRelayController(newRelayController);
                 // rules
                 List<Rule> newRules = new ArrayList<>();
                 for (Rule rule : input.getRules()) {
                     Rule newRule = new Rule();
                     BeanUtils.copyProperties(newRule, rule);
                     newRule.setInput(newInput);
+                    // actions (for chain rule)
+                    if (rule.getActions() != null) {
+                        List<Action> newActions = new ArrayList<>();
+                        for (Action action : rule.getActions()) {
+                            Action newAction = new Action();
+                            BeanUtils.copyProperties(newAction, action);
+                            newAction.setRule(newRule);
+                            newActions.add(newAction);
+                        }
+                        newRule.setActions(newActions);
+                    }
+                    // -- actions
+                    // acls
+                    if (rule.getAcls() != null) {
+                        List<Acl> newAcls = new ArrayList<>();
+                        for (Acl acl : rule.getAcls()) {
+                            Acl newAcl = new Acl();
+                            BeanUtils.copyProperties(newAcl, acl);
+                            newAcl.setRule(newRule);
+                            newAcls.add(newAcl);
+                        }
+                        newRule.setAcls(newAcls);
+                    }
+                    // -- acls
                     newRules.add(newRule);
                 }
                 newInput.setRules(newRules);
                 // -- rules
-                newInput.setRelayController(newRelayController);
                 newInputs.add(newInput);
             }
             newRelayController.setInputs(newInputs);

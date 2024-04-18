@@ -18,7 +18,7 @@ public class Input {
     private Integer id;
     private String name;
     private String type;
-    @OneToMany(mappedBy = "input")
+    @OneToMany(mappedBy = "input", cascade = CascadeType.ALL) // без cascade = CascadeType.ALL при вставке не добавляются rules
     private List<Rule> rules;
     @JsonBackReference
     @JoinColumn(name = "relay_controller_uuid", nullable=false)

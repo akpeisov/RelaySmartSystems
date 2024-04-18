@@ -13,7 +13,6 @@ public class Acl {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
-
     String type;
     Integer id;
     String io;
