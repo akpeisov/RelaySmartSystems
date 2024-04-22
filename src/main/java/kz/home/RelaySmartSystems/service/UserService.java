@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -17,8 +18,8 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public User findById(String id) {
-        return userRepository.getOne(id);
+    public Optional<User> findById(String id) {
+        return userRepository.findById(id);
     }
     public List<User> findAll() {
         return userRepository.findAll();
@@ -30,5 +31,13 @@ public class UserService {
 
     public User findByToken(String token) {
         return userRepository.getOne(token);
+    }
+
+    public User addUser(String username, String firstname, String lastname) {
+        User user = new User();
+        user.setId(username);
+        user.setFirstName(firstname);
+        user.setLastName(lastname);
+        return userRepository.save(user);
     }
 }

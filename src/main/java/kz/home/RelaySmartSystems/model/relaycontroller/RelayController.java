@@ -1,6 +1,7 @@
 package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import kz.home.RelaySmartSystems.model.User;
 import lombok.NoArgsConstructor;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_controllers")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RelayController {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -23,6 +25,13 @@ public class RelayController {
     private String type;
     private String name;
     private String status;
+    private Integer uptime;
+    private Integer freeMemory;
+    private String version;
+    private String ethip;
+    private String wifiip;
+    private String description;
+    private Integer wifirssi;
     // mappedBy - имя "колонки" (точнее поля) в дочерней таблице, по которой будет связка с id данной
     @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL)
     private List<Output> outputs = new ArrayList<Output>();
@@ -85,5 +94,61 @@ public class RelayController {
 
     public void setInputs(List<Input> inputs) {
         this.inputs = inputs;
+    }
+
+    public Integer getUptime() {
+        return uptime;
+    }
+
+    public void setUptime(Integer uptime) {
+        this.uptime = uptime;
+    }
+
+    public Integer getFreeMemory() {
+        return freeMemory;
+    }
+
+    public void setFreeMemory(Integer freeMemory) {
+        this.freeMemory = freeMemory;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getEthip() {
+        return ethip;
+    }
+
+    public void setEthip(String ethip) {
+        this.ethip = ethip;
+    }
+
+    public String getWifiip() {
+        return wifiip;
+    }
+
+    public void setWifiip(String wifiip) {
+        this.wifiip = wifiip;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Integer getWifirssi() {
+        return wifirssi;
+    }
+
+    public void setWifirssi(Integer wifirssi) {
+        this.wifirssi = wifirssi;
     }
 }

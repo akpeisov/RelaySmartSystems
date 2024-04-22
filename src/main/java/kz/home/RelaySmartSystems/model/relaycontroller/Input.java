@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
@@ -11,6 +12,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_inputs")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Input {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

@@ -1,7 +1,6 @@
 package kz.home.RelaySmartSystems.controller;
 
 import kz.home.RelaySmartSystems.model.TestMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,9 +9,9 @@ import javax.servlet.http.HttpServletRequest;
 @RestController
 @RequestMapping(value = "/test")
 public class SocketController {
-    private final SocketHandler socketHandler;
+    private final WebSocketHandler socketHandler;
 
-    public SocketController(SocketHandler socketHandler) {
+    public SocketController(WebSocketHandler socketHandler) {
         this.socketHandler = socketHandler;
     }
 
@@ -20,13 +19,6 @@ public class SocketController {
     public ResponseEntity<?> testWS(@RequestBody TestMessage testMessage) {
         String response;
         response = socketHandler.sendMessageToUser(testMessage.getId(), testMessage.getMessage());
-        return ResponseEntity.ok().body(response);
-    }
-
-    @PostMapping("/ws2")
-    public ResponseEntity<?> testWS2(@RequestBody TestMessage testMessage) {
-        String response;
-        response = socketHandler.sendMessageToUser2(testMessage.getControllerId(), testMessage.getMessage());
         return ResponseEntity.ok().body(response);
     }
 

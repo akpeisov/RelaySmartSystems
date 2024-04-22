@@ -1,6 +1,7 @@
 package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
@@ -19,13 +20,16 @@ public class Rule {
     private String action;
     private Long duration;
     private Integer slaveid;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String type;
     @JsonBackReference
     @JoinColumn(name = "input_uuid", nullable=false)
     @ManyToOne(optional = false)
     private Input input;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
     private List<Action> actions;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
     private List<Acl> acls;
 

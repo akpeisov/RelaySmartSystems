@@ -10,5 +10,6 @@ import java.util.List;
 @Repository
 public interface RelayControllerRepository extends JpaRepository<RelayController, String> {
     List<RelayController> findByUser(User user);
+//    RelayController findByMacIgnoreCase(String mac); // IgnoreCase якобы делает все сам, но и все вызовы должны быть соответствующие
     RelayController findByMac(String mac);
 }

@@ -18,29 +18,15 @@ public class User {
 //    String username;
     String firstName;
     String lastName;
-    String token;
 
-//    public String getUsername() {
-//        return username;
+//    public User(String firstName) {
+//        this.firstName = firstName;
 //    }
-//    public void setUsername(String username) {
-//        this.username = username;
+//
+//    public User(String firstName, String lastName) {
+//        this.firstName = firstName;
+//        this.lastName = lastName;
 //    }
-    public String getToken() {
-        return token;
-    }
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public User(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public User(String firstName, String lastName) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-    }
 
     public String getId() {
         return id;
@@ -48,5 +34,25 @@ public class User {
 
     public String getFio() {
         return this.firstName + " " + this.lastName;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 }

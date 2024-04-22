@@ -2,6 +2,8 @@ package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
@@ -10,6 +12,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_outputs")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Output {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -19,7 +22,10 @@ public class Output {
     private Long duration;
     private Long timer;
     private String type;
+    @JsonProperty("default")
+    @Column(name = "default")
     private String _default;
+    private String state;
 
     //    @JsonBackReference
     //@JsonIgnore
@@ -81,5 +87,13 @@ public class Output {
     }
     public void setRelayController(RelayController relayController) {
         this.relayController = relayController;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
     }
 }
