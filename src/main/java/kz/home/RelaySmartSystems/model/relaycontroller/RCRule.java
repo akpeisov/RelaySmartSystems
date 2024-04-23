@@ -11,7 +11,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_rules")
-public class Rule {
+public class RCRule {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
@@ -25,13 +25,13 @@ public class Rule {
     @JsonBackReference
     @JoinColumn(name = "input_uuid", nullable=false)
     @ManyToOne(optional = false)
-    private Input input;
+    private RCInput input;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
-    private List<Action> actions;
+    private List<RCAction> actions;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
-    private List<Acl> acls;
+    private List<RCAcl> acls;
 
     public String getEvent() {
         return event;
@@ -81,27 +81,27 @@ public class Rule {
         this.type = type;
     }
 
-    public List<Action> getActions() {
+    public List<RCAction> getActions() {
         return actions;
     }
 
-    public void setActions(List<Action> actions) {
+    public void setActions(List<RCAction> actions) {
         this.actions = actions;
     }
 
-    public List<Acl> getAcls() {
+    public List<RCAcl> getAcls() {
         return acls;
     }
 
-    public void setAcls(List<Acl> acls) {
+    public void setAcls(List<RCAcl> acls) {
         this.acls = acls;
     }
 
-    public Input getInput() {
+    public RCInput getInput() {
         return input;
     }
 
-    public void setInput(Input input) {
+    public void setInput(RCInput input) {
         this.input = input;
     }
 }

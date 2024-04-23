@@ -1,8 +1,12 @@
 package kz.home.RelaySmartSystems.model.alice;
 
-public class CustomResponse {
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+public class AliceActionResult {
     private String status;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String errorCode;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String errorMessage;
 
     public String getStatus() {
@@ -26,14 +30,4 @@ public class CustomResponse {
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
     }
-
-    public String getMqttTopic() {
-        return mqttTopic;
-    }
-
-    public void setMqttTopic(String mqttTopic) {
-        this.mqttTopic = mqttTopic;
-    }
-
-    private String mqttTopic;
 }

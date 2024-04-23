@@ -1,5 +1,6 @@
 package kz.home.RelaySmartSystems.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.Controller;
 import kz.home.RelaySmartSystems.model.User;
@@ -21,6 +22,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component // иначе из конфигурации не привяжется класс
 public class WebSocketHandler extends TextWebSocketHandler {
@@ -125,10 +128,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
             default:
                 logger.info(wsTextMessage.getPayload().toString());
         }
-
-
-        //session.sendMessage(new TextMessage("Received: " + payload));
-        //logger.info(session.getId());
     }
 
     @Override
@@ -244,5 +243,25 @@ public class WebSocketHandler extends TextWebSocketHandler {
             }
             // TODO : add other controllers types
         }
+    }
+
+    public String sendDeviceAction(String mac, Integer output, String action, Integer slaveId) {
+        Map<String, Object> objectMap = new HashMap<>();
+        objectMap.put("type", "ACTION");
+        objectMap.put("payload", new HashMap<String, Object>() {{
+            put("output", output);
+            put("action", action);
+            if (slaveId > 0)
+                put("slaveid", slaveId);
+        }});
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(objectMap);
+            logger.info(json);
+            return sendMessageToUser(mac, json);
+        } catch (JsonProcessingException e) {
+            //throw new RuntimeException(e);
+        }
+        return "ERROR";
     }
 }

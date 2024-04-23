@@ -3,7 +3,7 @@ package kz.home.RelaySmartSystems.service;
 import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
-import kz.home.RelaySmartSystems.repository.OutputRepository;
+import kz.home.RelaySmartSystems.repository.RCOutputRepository;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import org.springframework.stereotype.Service;
 
@@ -16,9 +16,9 @@ import org.apache.commons.beanutils.BeanUtils;
 @Service
 public class RelayControllerService {
     private final RelayControllerRepository relayControllerRepository;
-    private final OutputRepository outputRepository;
+    private final RCOutputRepository outputRepository;
 
-    public RelayControllerService(RelayControllerRepository relayControllerRepository, OutputRepository outputRepository) {
+    public RelayControllerService(RelayControllerRepository relayControllerRepository, RCOutputRepository outputRepository) {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
     }
@@ -40,9 +40,9 @@ public class RelayControllerService {
             newRelayController.setUser(user);
 
             // outputs
-            List<Output> newOutputs = new ArrayList<>();
-            for (Output output : relayController.getOutputs()) {
-                Output newOutput = new Output();
+            List<RCOutput> newOutputs = new ArrayList<>();
+            for (RCOutput output : relayController.getOutputs()) {
+                RCOutput newOutput = new RCOutput();
                 BeanUtils.copyProperties(newOutput, output);
                 newOutput.setRelayController(newRelayController);
                 newOutputs.add(newOutput);
@@ -50,22 +50,22 @@ public class RelayControllerService {
             newRelayController.setOutputs(newOutputs);
 
             // inputs
-            List<Input> newInputs = new ArrayList<>();
-            for (Input input : relayController.getInputs()) {
-                Input newInput = new Input();
+            List<RCInput> newInputs = new ArrayList<>();
+            for (RCInput input : relayController.getInputs()) {
+                RCInput newInput = new RCInput();
                 BeanUtils.copyProperties(newInput, input);
                 newInput.setRelayController(newRelayController);
                 // rules
-                List<Rule> newRules = new ArrayList<>();
-                for (Rule rule : input.getRules()) {
-                    Rule newRule = new Rule();
+                List<RCRule> newRules = new ArrayList<>();
+                for (RCRule rule : input.getRules()) {
+                    RCRule newRule = new RCRule();
                     BeanUtils.copyProperties(newRule, rule);
                     newRule.setInput(newInput);
                     // actions (for chain rule)
                     if (rule.getActions() != null) {
-                        List<Action> newActions = new ArrayList<>();
-                        for (Action action : rule.getActions()) {
-                            Action newAction = new Action();
+                        List<RCAction> newActions = new ArrayList<>();
+                        for (RCAction action : rule.getActions()) {
+                            RCAction newAction = new RCAction();
                             BeanUtils.copyProperties(newAction, action);
                             newAction.setRule(newRule);
                             newActions.add(newAction);
@@ -75,9 +75,9 @@ public class RelayControllerService {
                     // -- actions
                     // acls
                     if (rule.getAcls() != null) {
-                        List<Acl> newAcls = new ArrayList<>();
-                        for (Acl acl : rule.getAcls()) {
-                            Acl newAcl = new Acl();
+                        List<RCAcl> newAcls = new ArrayList<>();
+                        for (RCAcl acl : rule.getAcls()) {
+                            RCAcl newAcl = new RCAcl();
                             BeanUtils.copyProperties(newAcl, acl);
                             newAcl.setRule(newRule);
                             newAcls.add(newAcl);
@@ -129,7 +129,7 @@ public class RelayControllerService {
     public void setOutputState(String mac, Integer output, String state) {
         RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
         if (c != null) {
-            Output o = outputRepository.findOutput(c.getUuid(), output);
+            RCOutput o = outputRepository.findOutput(c.getUuid(), output);
             if (o != null) {
                 o.setState(state);
                 outputRepository.save(o);
@@ -140,7 +140,7 @@ public class RelayControllerService {
     public void setInputState(String mac, Integer input, String state) {
         RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
         if (c != null) {
-            Output o = outputRepository.findInput(c.getUuid(), input);
+            RCOutput o = outputRepository.findInput(c.getUuid(), input);
             if (o != null) {
                 o.setState(state);
                 outputRepository.save(o);

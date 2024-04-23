@@ -1,47 +1,92 @@
 package kz.home.RelaySmartSystems.model.alice;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.*;
+import kz.home.RelaySmartSystems.model.User;
 
+import javax.persistence.CascadeType;
+import javax.persistence.FetchType;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AliceDevice {
-    public String request_id;
-    public Payload payload;
+    private String id;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private String name;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private String description;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private String type;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private String room;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private String errorCode;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private String errorMessage;
+    @JsonProperty("capabilities")
+    private List<AliceCapability> aliceCapabilities;
 
-    public String getRequest_id() {
-        return request_id;
+    public String getId() {
+        return id;
     }
 
-    public void setRequest_id(String request_id) {
-        this.request_id = request_id;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public Payload getPayload() {
-        return payload;
+    public String getName() {
+        return name;
     }
 
-    public void setPayload(Payload payload) {
-        this.payload = payload;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public static class Payload {
-        List<Device> devices;
-        String user_id;
-        public List<Device> getDevices() {
-            return devices;
-        }
+    public String getDescription() {
+        return description;
+    }
 
-        public void setDevices(List<Device> devices) {
-            this.devices = devices;
-        }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-        public String getUser_id() {
-            return user_id;
-        }
+    public String getType() {
+        return type;
+    }
 
-        public void setUser_id(String user_id) {
-            this.user_id = user_id;
-        }
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getRoom() {
+        return room;
+    }
+
+    public void setRoom(String room) {
+        this.room = room;
+    }
+
+    public List<AliceCapability> getAliceCapabilities() {
+        return aliceCapabilities;
+    }
+
+    public void setAliceCapabilities(List<AliceCapability> aliceCapabilities) {
+        this.aliceCapabilities = aliceCapabilities;
+    }
+
+    public String getErrorCode() {
+        return errorCode;
+    }
+
+    public void setErrorCode(String errorCode) {
+        this.errorCode = errorCode;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
     }
 }
-

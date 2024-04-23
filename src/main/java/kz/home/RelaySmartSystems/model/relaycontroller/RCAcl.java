@@ -9,7 +9,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_acl")
-public class Acl {
+public class RCAcl {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
@@ -20,7 +20,7 @@ public class Acl {
     @JsonBackReference
     @ManyToOne(optional = false)
     @JoinColumn(name = "rule_uuid", nullable=false)
-    Rule rule;
+    RCRule rule;
 
     public String getType() {
         return type;
@@ -54,11 +54,11 @@ public class Acl {
         this.state = state;
     }
 
-    public Rule getRule() {
+    public RCRule getRule() {
         return rule;
     }
 
-    public void setRule(Rule rule) {
+    public void setRule(RCRule rule) {
         this.rule = rule;
     }
 }

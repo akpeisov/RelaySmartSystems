@@ -1,14 +1,10 @@
 package kz.home.RelaySmartSystems.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.Controller;
 import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.UserDevices;
-import kz.home.RelaySmartSystems.model.alice.ResponseError;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
-import kz.home.RelaySmartSystems.repository.DeviceRepository;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
-import kz.home.RelaySmartSystems.repository.UserRepository;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
 import org.slf4j.Logger;

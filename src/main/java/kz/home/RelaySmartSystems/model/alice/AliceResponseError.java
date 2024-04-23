@@ -1,16 +1,16 @@
 package kz.home.RelaySmartSystems.model.alice;
 
-public class ResponseError {
-    private String request_id;
+public class AliceResponseError {
+    private String requestId;
     private String status = "error";
     private String message;
 
-    public String getRequest_id() {
-        return request_id;
+    public String getRequestId() {
+        return requestId;
     }
 
-    public void setRequest_id(String request_id) {
-        this.request_id = request_id;
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 
     public String getStatus() {
@@ -29,14 +29,14 @@ public class ResponseError {
         this.message = message;
     }
 
-    public ResponseError(String request_id, String status, String message) {
-        this.request_id = request_id;
+    public AliceResponseError(String requestId, String status, String message) {
+        this.requestId = requestId;
         this.status = status;
         this.message = message;
     }
 
-    public ResponseError(String request_id, String message) {
-        this.request_id = request_id;
+    public AliceResponseError(String requestId, String message) {
+        this.requestId = requestId;
         this.message = message;
     }
 }

@@ -1,13 +1,13 @@
 package kz.home.RelaySmartSystems.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kz.home.RelaySmartSystems.model.alice.ResponseError;
+import kz.home.RelaySmartSystems.model.alice.AliceResponseError;
 import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.alice.*;
-import kz.home.RelaySmartSystems.repository.DeviceRepository;
+import kz.home.RelaySmartSystems.model.relaycontroller.RCOutput;
+import kz.home.RelaySmartSystems.repository.RCOutputRepository;
 import kz.home.RelaySmartSystems.repository.UserRepository;
 import kz.home.RelaySmartSystems.service.AliceRequestLogService;
-import kz.home.RelaySmartSystems.service.DeviceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -17,28 +17,25 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.HandlerMapping;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "alice/v1.0")
 public class AliceController {
     private static final Logger logger = LoggerFactory.getLogger(AliceController.class);
     private final UserRepository userRepository;
-    private final DeviceRepository deviceRepository;
-    private final DeviceService deviceService;
     private final AliceRequestLogService aliceRequestLogService;
+    private final RCOutputRepository rcOutputRepository;
+    private final WebSocketHandler webSocketHandler;
 
     public AliceController(UserRepository userRepository,
-                           DeviceRepository deviceRepository,
-                           DeviceService deviceService,
-                           AliceRequestLogService aliceRequestLogService) {
+                           AliceRequestLogService aliceRequestLogService,
+                           RCOutputRepository rcOutputRepository,
+                           WebSocketHandler webSocketHandler) {
         this.userRepository = userRepository;
-        this.deviceRepository = deviceRepository;
-        this.deviceService = deviceService;
         this.aliceRequestLogService = aliceRequestLogService;
+        this.rcOutputRepository = rcOutputRepository;
+        this.webSocketHandler = webSocketHandler;
     }
 
     @GetMapping("")
@@ -54,6 +51,7 @@ public class AliceController {
         // POST	/v1.0/user/unlink	Оповещение о разъединении аккаунтов
         //-H 'Authorization: Bearer 123qwe456a...' \
         //-H 'X-Request-Id: ff36a3cc-ec...'
+        // TODO : implement method
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("request_id", requestId);
         return ResponseEntity.ok().body(map);
@@ -69,24 +67,40 @@ public class AliceController {
                 username, (String)request.getAttribute("token"),"");
         if (username == null) {
             aliceRequestLogService.setResponse(logId, "Username is null");
-            return ResponseEntity.status(404).body(new ResponseError(requestId, "Username is null"));
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "Username is null"));
         }
 
         User user = (User) userRepository.findById(username).orElse(null); // orElse avoid optional cast converion
         if (user == null) {
             logger.info(String.format("User with username %s not found", username));
             aliceRequestLogService.setResponse(logId, String.format("User with username %s not found", username));
-            return ResponseEntity.status(404).body(new ResponseError(requestId, "User not found"));
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
         }
 
-        // get user devices
-        List<Device> userDevices = deviceRepository.findByUser(user);
-        DeviceResponse response = new DeviceResponse();
-        response.setRequest_id(requestId);
+        // считаем все выходы контроллеров с признаком alice
+        AliceDeviceResponse response = new AliceDeviceResponse();
+        response.setRequestId(requestId);
+        AlicePayload payload = new AlicePayload();
+        payload.setUserId(user.getId());
 
-        DeviceResponse.Payload payload = new DeviceResponse.Payload();
-        payload.setUser_id(user.getId());
-        payload.setDevices(userDevices);
+        List<AliceDevice> aliceDevices = new ArrayList<>();
+        List<RCOutput> outputs = rcOutputRepository.getOutputs(user);
+        for (RCOutput rcOutput: outputs) {
+            AliceDevice aliceDevice = new AliceDevice();
+            aliceDevice.setId(rcOutput.getUuid().toString());
+            aliceDevice.setName(rcOutput.getName());
+            aliceDevice.setDescription(rcOutput.getName());
+            aliceDevice.setRoom(rcOutput.getRoom());
+            aliceDevice.setType("devices.types.light"); // считаем все лампами
+
+            AliceCapability aliceCapability = new AliceCapability();
+            aliceCapability.setType("devices.capabilities.on_off");
+            List<AliceCapability> aliceCapabilities = new ArrayList<>();
+            aliceCapabilities.add(aliceCapability);
+            aliceDevice.setAliceCapabilities(aliceCapabilities);
+            aliceDevices.add(aliceDevice);
+        }
+        payload.setDevices(aliceDevices);
         response.setPayload(payload);
 
         aliceRequestLogService.setResponse(logId, toJson(response));
@@ -96,57 +110,56 @@ public class AliceController {
     @PostMapping(path = "/user/devices/query", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<?> queryDevices(HttpServletRequest request,
                                           @RequestHeader(value = "X-Request-Id", required = false) String requestId,
-                                          @RequestBody DeviceStateRequest deviceStateRequest) {
+                                          @RequestBody AliceDeviceStateRequest deviceStateRequest) {
         String username = (String) request.getAttribute("username");
         logger.info(String.format("user devices query. Username %s", username));
         Long logId = aliceRequestLogService.writeLog("devices query", request.getHeader("X-Real-IP"), requestId,
                 username, (String)request.getAttribute("token"), deviceStateRequest.toString());
         if (username == null) {
             aliceRequestLogService.setResponse(logId, "Username is null");
-            return ResponseEntity.status(404).body(new ResponseError(requestId, "User not found"));
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
         }
-        User user = (User) userRepository.findById(username).orElse(null); // orElse avoid optional cast converion
+        User user = userRepository.findById(username).orElse(null); // orElse avoid optional cast converion
         if (user == null) {
             logger.info(String.format("User with username %s not found", username));
             aliceRequestLogService.setResponse(logId, String.format("User with username %s not found", username));
-            return ResponseEntity.status(404).body(new ResponseError(requestId, "User not found"));
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
         }
 
-        DeviceStateResponse deviceStateResponse = new DeviceStateResponse();
+        AliceDeviceStateResponse deviceStateResponse = new AliceDeviceStateResponse();
         deviceStateResponse.setRequest_id(requestId);
 
-//        DeviceStateRequest deviceStateRequest;
-//        try {
-//            deviceStateRequest = (DeviceStateRequest) request.getm;
-//        } catch (Exception e) {
-//            return ResponseEntity.status(400).body(new ResponseError(requestId, "Incorrect request"));
-//        }
+        AlicePayload alicePayload = new AlicePayload();
+        List<AliceDevice> devices = new ArrayList<>();
 
-        List<DeviceStateResponse.Payload.Device> deviceList = new ArrayList<>();
-
-        for (DeviceStateRequest.DeviceInfo deviceInfo : deviceStateRequest.getDevices()) {
-            DeviceStateResponse.Payload.Device device = new DeviceStateResponse.Payload.Device();
-            logger.info("id " + deviceInfo.getId());
-            device.setId(deviceInfo.getId());
-            // find device by id
-            if (!deviceRepository.existsById(deviceInfo.getId())) {
-                device.setError_code("DEVICE_NOT_FOUND");
-                device.setError_message("Device with id not found");
+        for (AliceDevice device : deviceStateRequest.getDevices()) {
+            RCOutput rcOutput = rcOutputRepository.findById(UUID.fromString(device.getId())).orElse(null);
+            AliceDevice aliceDevice = new AliceDevice();
+            aliceDevice.setId(device.getId());
+            if (rcOutput == null) {
+                aliceDevice.setErrorCode("DEVICE_NOT_FOUND");
+                aliceDevice.setErrorMessage("Device not found");
             } else {
-                Device dev = deviceRepository.findById(deviceInfo.getId()).orElse(null);
-                if (dev != null) {
-                    logger.info("dev " + dev.getDescription());
-                    List<Capability> capabilities = dev.getCapabilities();
-                    device.setCapabilities(capabilities);
-                }
+                aliceDevice.setName(rcOutput.getName());
+                aliceDevice.setDescription(rcOutput.getName());
+                aliceDevice.setRoom(rcOutput.getRoom());
+                aliceDevice.setType("devices.types.light"); // считаем все лампами
+
+                AliceCapability aliceCapability = new AliceCapability();
+                aliceCapability.setType("devices.capabilities.on_off");
+                AliceState aliceState = new AliceState();
+                aliceState.setInstance("on");
+                aliceState.setValue("on".equalsIgnoreCase(rcOutput.getState()));
+                aliceCapability.setState(aliceState);
+                List<AliceCapability> aliceCapabilities = new ArrayList<>();
+                aliceCapabilities.add(aliceCapability);
+                aliceDevice.setAliceCapabilities(aliceCapabilities);
             }
-            deviceList.add(device);
+            devices.add(aliceDevice);
         }
 
-        DeviceStateResponse.Payload payload = new DeviceStateResponse.Payload();
-        payload.setDevices(deviceList);
-
-        deviceStateResponse.setPayload(payload);
+        alicePayload.setDevices(devices);
+        deviceStateResponse.setPayload(alicePayload);
 
         aliceRequestLogService.setResponse(logId, toJson(deviceStateResponse));
         return ResponseEntity.ok().body(deviceStateResponse);
@@ -155,77 +168,70 @@ public class AliceController {
     @PostMapping(path = "/user/devices/action", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<?> deviceAction(HttpServletRequest request,
                                           @RequestHeader(value = "X-Request-Id", required = false) String requestId,
-                                          @RequestBody DeviceActionRequest deviceActionRequest) {
+                                          @RequestBody AliceDeviceActionRequest deviceActionRequest) {
         String username = (String) request.getAttribute("username");
         logger.info(String.format("user devices action. Username %s", username));
         Long logId = aliceRequestLogService.writeLog("devices query", request.getHeader("X-Real-IP"), requestId,
                 username, (String)request.getAttribute("token"), deviceActionRequest.toString());
         if (username == null) {
             aliceRequestLogService.setResponse(logId, "Username is null");
-            return ResponseEntity.status(404).body(new ResponseError(requestId, "User not found"));
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
         }
         User user = (User) userRepository.findById(username).orElse(null); // orElse avoid optional cast converion
         if (user == null) {
             logger.info(String.format("User with username %s not found", username));
             aliceRequestLogService.setResponse(logId, String.format("User with username %s not found", username));
-            return ResponseEntity.status(404).body(new ResponseError(requestId, "User not found"));
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
         }
 
-        DeviceActionResponse deviceActionResponse = new DeviceActionResponse();
-        deviceActionResponse.setRequest_id(requestId);
+        AliceDeviceActionResponse aliceDeviceActionResponse = new AliceDeviceActionResponse();
+        aliceDeviceActionResponse.setRequest_id(requestId);
 
-        List<DeviceActionResponse.Payload.Device> deviceList = new ArrayList<>();
+        List<AliceDevice> deviceList = new ArrayList<>();
 
-        for (DeviceActionRequest.Payload.DeviceInfo deviceInfo : deviceActionRequest.getPayload().getDevices()) {
-//            logger.info("id " + deviceInfo.getId());
-
-            DeviceActionResponse.Payload.Device device = new DeviceActionResponse.Payload.Device();
-            device.setId(deviceInfo.getId());
-            // find device by id
-            if (!deviceRepository.existsById(device.getId())) {
-//                logger.info("no device found");
-                device.setAction_result(new DeviceActionResponse.Payload.Device.ActionResult("ERROR", "DEVICE_UNREACHABLE", "Device not found"));
+        List<AliceDevice> aliceDevices = new ArrayList<>();
+        for (AliceDevice aliceDevice : deviceActionRequest.getPayload().getDevices()) {
+            RCOutput output = rcOutputRepository.findById(UUID.fromString(aliceDevice.getId())).orElse(null);
+            AliceActionResult actionResult = new AliceActionResult();
+            List<AliceCapability> aliceCapabilities = new ArrayList<>();
+            if (output == null) {
+                actionResult.setStatus("ERROR");
+                actionResult.setErrorCode("DEVICE_NOT_FOUND");
             } else {
-                // get device
-                Device dev = deviceRepository.getById(deviceInfo.getId());
-                // for each capability do action
-                List<DeviceActionResponse.Payload.Device.Capability> capabilities = new ArrayList<>();
-                for (DeviceActionRequest.Payload.DeviceInfo.Capability capability : deviceInfo.getCapabilities()) {
-//                    logger.info(capability.getType());
-                    // check for existing capability
-                    //String res = deviceService.setCapabilityValue(device.getId(), capability.getType(), capability.getState().toString());
-                    CustomResponse resp = deviceService.setCapabilityValue(device.getId(), capability.getType(), capability.getState().toString());
-                    // publish
-                    // TODO : action here
-//                    if (resp.getMqttTopic() != null) {
-//                        String message = "OFF";
-//                        if (capability.getState().getBoolValue())
-//                            message = "ON";
-//                        mqttService.publish(message, resp.getMqttTopic(), 0, false);
-//                    }
-//                    logger.info("res " + res);
-//                    String errorCode = res != "DONE" ? res.split(" ", 2)[0] : null;
-//                    String errorMessage = res != "DONE" ? res.split(" ", 2)[1] : null;
-                    DeviceActionResponse.Payload.Device.Capability respCapability = new DeviceActionResponse.Payload.Device.Capability();
-                    respCapability.setType(capability.getType());
-                    DeviceActionResponse.Payload.Device.Capability.State state = new DeviceActionResponse.Payload.Device.Capability.State();
-                    state.setInstance(capability.getState().getInstance());
-//                    state.setAction_result(new DeviceActionResponse.Payload.Device.ActionResult(res == "DONE" ? "DONE" : "ERROR", errorCode, errorMessage));
-                    state.setAction_result(new DeviceActionResponse.Payload.Device.ActionResult(resp.getStatus(), resp.getErrorCode(), resp.getErrorMessage()));
-                    respCapability.setState(state);
-                    capabilities.add(respCapability);
+                // по каждому умению нужно отработать и предоставить ответ
+                for (AliceCapability aliceCapability : aliceDevice.getAliceCapabilities()) {
+                    AliceState aliceState = aliceCapability.getState();
+                    if ("devices.capabilities.on_off".equals(aliceCapability.getType())) {
+                        String value = "off";
+                        if ((Boolean) aliceCapability.getState().getValue())
+                            value = "on";
+                        String mac = output.getRelayController().getMac();
+                        String res = webSocketHandler.sendDeviceAction(mac, output.getId(), value, 0);
+                        // TODO : add slaveid
+                        if ("OK".equals(res)) {
+                            actionResult.setStatus("DONE");
+                        } else if ("NOT_FOUND".equals(res)) {
+                            actionResult.setStatus("ERROR");
+                            actionResult.setErrorCode("DEVICE_NOT_FOUND");
+                        } else {
+                            actionResult.setStatus("ERROR");
+                            actionResult.setErrorCode("UNKNOWN_ERROR");
+                        }
+                    }
+                    aliceState.setActionResult(actionResult);
+                    aliceCapability.setState(aliceState);
+                    aliceCapabilities.add(aliceCapability);
                 }
-                device.setCapabilities(capabilities);
             }
-            deviceList.add(device);
+            aliceDevice.setAliceCapabilities(aliceCapabilities);
+            aliceDevices.add(aliceDevice);
         }
+        AlicePayload alicePayload = new AlicePayload();
+        alicePayload.setDevices(aliceDevices);
+        aliceDeviceActionResponse.setPayload(alicePayload);
 
-        DeviceActionResponse.Payload payload = new DeviceActionResponse.Payload();
-        payload.setDevices(deviceList);
-
-        deviceActionResponse.setPayload(payload);
-        aliceRequestLogService.setResponse(logId, toJson(deviceActionResponse));
-        return ResponseEntity.ok().body(deviceActionResponse);
+        aliceRequestLogService.setResponse(logId, toJson(aliceDeviceActionResponse));
+        return ResponseEntity.ok().body(aliceDeviceActionResponse);
     }
 
     @RequestMapping(value="**",method = {RequestMethod.GET, RequestMethod.POST})

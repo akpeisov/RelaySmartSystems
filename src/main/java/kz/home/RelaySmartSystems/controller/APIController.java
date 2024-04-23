@@ -1,28 +1,20 @@
 package kz.home.RelaySmartSystems.controller;
 
-import kz.home.RelaySmartSystems.model.alice.Device;
 import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.relaycontroller.Output;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
-import kz.home.RelaySmartSystems.repository.DeviceRepository;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import kz.home.RelaySmartSystems.repository.UserRepository;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
-
-import org.modelmapper.ModelMapper;
 
 @RestController
 @RequestMapping(value = "/api")
 public class APIController {
+    // TODO : временный класс. Для всяких тестов
     private final UserRepository userRepository;
-    private final DeviceRepository deviceRepository;
     private final RelayControllerRepository relayControllerRepository;
-
     private final RelayControllerService relayControllerService;
 //    private final ModelMapper modelMapper;
 //    public APIController(UserRepository userRepository,
@@ -35,10 +27,8 @@ public class APIController {
 //        this.modelMapper = modelMapper;
 //    }
 public APIController(UserRepository userRepository,
-                     DeviceRepository deviceRepository,
                      RelayControllerRepository relayControllerRepository, RelayControllerService relayControllerService) {
     this.userRepository = userRepository;
-    this.deviceRepository = deviceRepository;
     this.relayControllerRepository = relayControllerRepository;
     this.relayControllerService = relayControllerService;
 }
@@ -61,11 +51,6 @@ public APIController(UserRepository userRepository,
     @DeleteMapping("/users/{id}")
     void deleteUser(@PathVariable String id) {
         userRepository.deleteById(id);
-    }
-
-    @GetMapping("/devices")
-    List<Device> getDevices() {
-        return deviceRepository.findAll();
     }
 
     @PostMapping("/addrelaycontroller")

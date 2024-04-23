@@ -9,7 +9,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_actions")
-public class Action {
+public class RCAction {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
@@ -21,7 +21,7 @@ public class Action {
     @JsonBackReference
     @JoinColumn(name = "rule_uuid", nullable=false)
     @ManyToOne(optional = false)
-    private Rule rule;
+    private RCRule rule;
 
     public Integer getId() {
         return id;
@@ -63,11 +63,11 @@ public class Action {
         this.duration = duration;
     }
 
-    public Rule getRule() {
+    public RCRule getRule() {
         return rule;
     }
 
-    public void setRule(Rule rule) {
+    public void setRule(RCRule rule) {
         this.rule = rule;
     }
 }

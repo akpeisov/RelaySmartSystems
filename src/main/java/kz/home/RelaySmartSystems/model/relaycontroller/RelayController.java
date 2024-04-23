@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -34,10 +33,10 @@ public class RelayController {
     private Integer wifirssi;
     // mappedBy - имя "колонки" (точнее поля) в дочерней таблице, по которой будет связка с id данной
     @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL)
-    private List<Output> outputs = new ArrayList<Output>();
+    private List<RCOutput> outputs = new ArrayList<RCOutput>();
 
     @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL)
-    private List<Input> inputs;
+    private List<RCInput> inputs;
 
     @JsonIgnore
     public UUID getUuid() {
@@ -80,19 +79,19 @@ public class RelayController {
         this.status = status;
     }
 
-    public List<Output> getOutputs() {
+    public List<RCOutput> getOutputs() {
         return outputs;
     }
 
-    public void setOutputs(List<Output> outputs) {
+    public void setOutputs(List<RCOutput> outputs) {
         this.outputs = outputs;
     }
 
-    public List<Input> getInputs() {
+    public List<RCInput> getInputs() {
         return inputs;
     }
 
-    public void setInputs(List<Input> inputs) {
+    public void setInputs(List<RCInput> inputs) {
         this.inputs = inputs;
     }
 
