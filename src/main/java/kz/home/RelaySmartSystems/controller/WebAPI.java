@@ -6,9 +6,11 @@ import kz.home.RelaySmartSystems.model.UserDevices;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import kz.home.RelaySmartSystems.service.ControllerService;
+import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,13 +26,17 @@ public class WebAPI {
     private final UserService userService;
     private final ControllerService controllerService;
     private final WebSocketHandler webSocketHandler;
+    private final RelayControllerService relayControllerService;
     public WebAPI(RelayControllerRepository relayControllerRepository,
                   UserService userService,
-                  ControllerService controllerService, WebSocketHandler webSocketHandler) {
+                  ControllerService controllerService,
+                  WebSocketHandler webSocketHandler,
+                  RelayControllerService relayControllerService) {
         this.relayControllerRepository = relayControllerRepository;
         this.userService = userService;
         this.controllerService = controllerService;
         this.webSocketHandler = webSocketHandler;
+        this.relayControllerService = relayControllerService;
     }
 
     @GetMapping("/userDevices")
@@ -136,6 +142,23 @@ public class WebAPI {
                                                  @RequestBody String mac) {
         webSocketHandler.requestControllerConfig(mac);
         return ResponseEntity.ok().body("Ok");
+    }
+
+    @PostMapping(path = "/setDeviceConfig", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> setDeviceConfig(HttpServletRequest request,
+                                             @RequestBody String mac) {
+        if (mac == null) {
+            return ResponseEntity.status(400).body("No mac");
+        }
+        String json = relayControllerService.makeDeviceConfig(mac);
+        if (json == null) {
+            return ResponseEntity.status(404).body("Config not found");
+        }
+        String res = webSocketHandler.sendMessageToUser(mac, json);
+        if (!"OK".equals(res)) {
+            return ResponseEntity.status(400).body(String.format("Error while sending message %s", res));
+        }
+        return ResponseEntity.ok().body("Config sent");
     }
 
 }

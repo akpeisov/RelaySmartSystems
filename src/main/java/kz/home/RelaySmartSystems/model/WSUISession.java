@@ -2,13 +2,12 @@ package kz.home.RelaySmartSystems.model;
 
 import org.springframework.web.socket.WebSocketSession;
 
-public class WSSession {
+public class WSUISession {
     private WebSocketSession session;
-    private String controllerId;
-    private String type;
+    private String username;
     private User user;
 
-    public WSSession(WebSocketSession session) {
+    public WSUISession(WebSocketSession session) {
         this.session = session;
     }
 
@@ -20,20 +19,12 @@ public class WSSession {
         this.session = session;
     }
 
-    public String getControllerId() {
-        return controllerId == null ? null : controllerId.toUpperCase();
+    public String getUsername() {
+        return username;
     }
 
-    public void setControllerId(String controllerId) {
-        this.controllerId = controllerId.toUpperCase();
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public User getUser() {

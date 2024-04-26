@@ -2,10 +2,8 @@ package kz.home.RelaySmartSystems.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kz.home.RelaySmartSystems.model.Controller;
-import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.WSSession;
-import kz.home.RelaySmartSystems.model.WSTextMessage;
+import kz.home.RelaySmartSystems.model.*;
+import kz.home.RelaySmartSystems.model.def.Action;
 import kz.home.RelaySmartSystems.model.def.Hello;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.model.relaycontroller.RCEvent;
@@ -14,6 +12,7 @@ import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -25,8 +24,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+// класс для контроллеров
 @Component // иначе из конфигурации не привяжется класс
-public class WebSocketHandler extends TextWebSocketHandler {
+public class WebSocketHandler extends TextWebSocketHandler implements ApplicationListener<WSEvent> {
     private static final ArrayList<WSSession> wsSessions = new ArrayList<WSSession>();
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHandler.class);
     private final ControllerService сontrollerService;
@@ -36,6 +36,22 @@ public class WebSocketHandler extends TextWebSocketHandler {
                             RelayControllerService relayControllerService) {
         this.сontrollerService = сontrollerService;
         this.relayControllerService = relayControllerService;
+    }
+
+    @Override
+    public void onApplicationEvent(WSEvent event) {
+        // Обработка события
+        try {
+            WSTextMessage wsTextMessage = (WSTextMessage) event.getSource();
+            if ("ACTION".equals(wsTextMessage.getType())) {
+                // это действие, надо найти нужную сессию и отправить туда
+                Action action = (Action)wsTextMessage.getPayload();
+                String mac = action.getMac();
+                sendMessageToUser(mac, wsTextMessage.makeMessage());
+            }
+        } catch (Exception e) {
+
+        }
     }
 
     @Override
@@ -50,19 +66,33 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
         if (wsSession == null) {
             logger.error("wsSession not found!");
+            session.sendMessage(new TextMessage(AlertMessage.makeAlert("WS session not found")));
+            session.close();
             return;
         }
 
         String payload = message.getPayload();
         logger.info(payload);
 
-        // TODO : add catch for incorrect data
+        byte[] json = null;
+        WSTextMessage wsTextMessage = null;
         ObjectMapper objectMapper = new ObjectMapper();
-        WSTextMessage wsTextMessage = objectMapper.readValue(payload, WSTextMessage.class);
-        byte[] json = objectMapper.writeValueAsBytes(wsTextMessage.getPayload());
+        try {
+            wsTextMessage = objectMapper.readValue(payload, WSTextMessage.class);
+            json = objectMapper.writeValueAsBytes(wsTextMessage.getPayload());
+        } catch (Exception e) {
+            session.sendMessage(new TextMessage(AlertMessage.makeAlert("Wrong message type")));
+            session.close();
+            return;
+        }
 
         String type = wsTextMessage.getType();
         if (type == null) {
+            return;
+        }
+        if (!"HELLO".equals(type) && wsSession.getControllerId() == null) {
+            session.sendMessage(new TextMessage(AlertMessage.makeAlert("No session identifier present")));
+            session.close();
             return;
         }
 
@@ -71,8 +101,22 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 logger.info(wsTextMessage.getPayload().toString());
                 Hello hello = objectMapper.readValue(json, Hello.class);
                 String mac = hello.getMac();
+                if (mac == null) {
+                    session.sendMessage(new TextMessage(AlertMessage.makeAlert("No MAC")));
+                    session.close();
+                    return;
+                }
                 setControllerIdForWSSession(session, mac);
                 setTypeForWSSession(session, hello.getType());
+                // если новое подключение с тем же маком, то надо поискать старые сессии и удалить старые
+                for (WSSession wsSessionOld : wsSessions) {
+                    if (mac.equalsIgnoreCase(wsSessionOld.getControllerId()) && !wsSessionOld.getSession().getId().equals(session.getId())) {
+                        logger.info(String.format("Removed mac %s from other session %s", mac, wsSessionOld.getSession().getId()));
+                        wsSessions.remove(wsSessionOld);
+                        wsSessionOld.getSession().close();
+                    }
+                }
+
                 logger.info(String.format("isControllerLinked %s", isControllerLinked(mac))); ;
                 if (!isControllerLinked(mac)) {
                     сontrollerService.addController(mac.toUpperCase(), hello.getType());
@@ -141,16 +185,29 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         // find current conrtoller and set offline
         String mac = getControllerIdForWSSession(session);
-        setControllerOffline(mac);
+        if (mac != null)
+            setControllerOffline(mac);
 
-        wsSessions.remove(new WSSession(session));
+        for (WSSession wsSession : wsSessions) {
+            if (wsSession.getSession().equals(session)) {
+                wsSessions.remove(wsSession);
+                break;
+            }
+        }
+
+        //wsSessions.remove(new WSSession(session));
         logger.info(String.format("Client disconnected with ID %s", session.getId()));
         super.afterConnectionClosed(session, status);
     }
 
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        logger.info(String.format("handleTransportError with ID %s", session.getId()));
+    }
+
     public String sendMessageToUser(String controllerId, String message) {
         if (controllerId == null)
-            return "ERROR";
+            return "MAC_NULL";
 
         for (WSSession session: wsSessions) {
             if (controllerId.toUpperCase().equals(session.getControllerId())) {
@@ -170,6 +227,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     private void setControllerIdForWSSession(WebSocketSession targetSession, String controllerId) {
+        if (controllerId == null)
+            return;
         for (WSSession wsSession : wsSessions) {
             if (wsSession.getSession().equals(targetSession)) {
                 wsSession.setControllerId(controllerId.toUpperCase());
@@ -179,6 +238,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     private void setTypeForWSSession(WebSocketSession targetSession, String type) {
+        if (type == null)
+            return;
         for (WSSession wsSession : wsSessions) {
             if (wsSession.getSession().equals(targetSession)) {
                 wsSession.setType(type);

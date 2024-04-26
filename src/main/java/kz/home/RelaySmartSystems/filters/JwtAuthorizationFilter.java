@@ -3,6 +3,7 @@ package kz.home.RelaySmartSystems.filters;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureException;
+import kz.home.RelaySmartSystems.model.TokenData;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -16,15 +17,68 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Date;
 
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
-    private static final String PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt8Er1XsuNHhpnenX5VlTk0rY+nrx8dGl1jVFH9zTSdjm4x1GbA/JCyQB+fSzuEojj61lt8ywbRje/Ur0SlHeIFQHtenvIaMuNqC3vrFurmMcMHXWSpgeDvuzvyKE3caQhUZWsrW3LC4xgvYSi1d+DbCMZpdJdMexhXpFma+932Ftg6FbZ8D27fR/vRHCFnY72FxSLup93cG9jPGKKmpWamfTkdX+uZC/my0AdGE6WWMJPIfNRunKAiucqTKeqSJLLQ+FF+yZ25mWkDtMufO4mqvdgKDBt2mYAQn+dj1DpX7tzFlFvgcCbl/cD0e+Jvh35Kh+UQxWtauhdKKbqGPu1wIDAQAB";
+    private static final String KeyForFront = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt8Er1XsuNHhpnenX5VlTk0rY+nrx8dGl1jVFH9zTSdjm4x1GbA/JCyQB+fSzuEojj61lt8ywbRje/Ur0SlHeIFQHtenvIaMuNqC3vrFurmMcMHXWSpgeDvuzvyKE3caQhUZWsrW3LC4xgvYSi1d+DbCMZpdJdMexhXpFma+932Ftg6FbZ8D27fR/vRHCFnY72FxSLup93cG9jPGKKmpWamfTkdX+uZC/my0AdGE6WWMJPIfNRunKAiucqTKeqSJLLQ+FF+yZ25mWkDtMufO4mqvdgKDBt2mYAQn+dj1DpX7tzFlFvgcCbl/cD0e+Jvh35Kh+UQxWtauhdKKbqGPu1wIDAQAB";
+    private static final String KeyForESP = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzKJvjOk84SPdY+bhzCaEdQNQcY9ekCWGHpwopXtEFoRi0kbTP+5hBN+nPCftuD2VGnxpW1qQwegWa4TkyL/CVDZE2BiotXHuMyfVQKC+YHyfJ/LgRkG119RD1YB9swn0UCO/recaGHcOd4UMaJOvuJf85zNs5CCIN85b6oIEMzbzRvZNvJqya2ZmG6/+nWW2RooKhHTwpNkKAjBaPygUjkr5744yxb6Q1tbow/CJlofPz8YmerkWmUEB3nbvqEsJp0wfgIU51WZL2OW1e0ndABHqv0tfqJbfFgmWjHY02YE9r01YuWOVfn2fQ0xI7pQO0FlNCzI0MpiCPk2/IB4XWQIDAQAB";
+
+    public TokenData validateToken(String token) {
+        TokenData tokenData = new TokenData();
+        if (token != null) {
+            try {
+                //Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+                Claims claims = Jwts.parser().verifyWith(generateJwtKeyDecryption(KeyForFront))
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+                tokenData.setUsername(claims.get("preferred_username", String.class));
+                //claims.getSubject(); // Имя пользователя preferred_username
+
+//                Date expirationDate = claims.getExpiration();
+//                Date now = new Date();
+//
+//                if (now.after(expirationDate)) {
+//                    tokenData.setErrorText("Token expired");
+//                }
+            } catch (SignatureException e) {
+                tokenData.setErrorText("Invalid signature");
+                tokenData.setException(e);
+                //logger.error("--- SignatureException");
+            } catch (NoSuchAlgorithmException e) {
+                //logger.error("--- NoSuchAlgorithmException")
+                tokenData.setErrorText("NoSuchAlgorithmException");
+                tokenData.setException(e);
+                //throw new RuntimeException(e);
+            } catch (InvalidKeySpecException e) {
+                //logger.error("--- InvalidKeySpecException");
+                tokenData.setErrorText("InvalidKeySpecException");
+                tokenData.setException(e);
+                //throw new RuntimeException(e);
+            } catch (Exception e) {
+                tokenData.setErrorText(e.getLocalizedMessage());
+                tokenData.setException(e);
+                //logger.error("--- Exception " + e.getLocalizedMessage());
+            }
+        }
+        return tokenData;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String token = extractJwtFromHeader(request);
         //logger.info(String.format("token %s", token));
         request.setAttribute("token", token);
+        TokenData tokenData = validateToken(token);
+//        if (tokenData.getErrorText() != null) {
+            //throw new RuntimeException (tokenData.getException());
+            //return;
+//        }
+        request.setAttribute("username", tokenData.getUsername());
+        filterChain.doFilter(request, response);
+
+        /*
+        //TODO : change by public TokenData validateToken(String token) {
         if (token != null) {
             try {
                 //Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
@@ -33,8 +87,8 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                         .parseSignedClaims(token)
                         .getPayload();
 
-                String username = //claims.getSubject(); // Имя пользователя preferred_username
-                claims.get("preferred_username", String.class);
+                String username = claims.get("preferred_username", String.class);
+                //claims.getSubject(); // Имя пользователя preferred_username
 
                 // Здесь можно выполнить дополнительные проверки, например, проверка истечения срока действия токена
 
@@ -56,8 +110,8 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                 logger.error("--- Exception " + e.getLocalizedMessage());
             }
         }
+*/
 
-        filterChain.doFilter(request, response);
     }
 
     private String extractJwtFromHeader(HttpServletRequest request) {

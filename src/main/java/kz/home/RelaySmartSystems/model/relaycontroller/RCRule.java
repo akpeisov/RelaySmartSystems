@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import kz.home.RelaySmartSystems.filters.PositiveIntegerFilter;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
@@ -11,6 +12,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_rules")
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class RCRule {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -19,17 +21,15 @@ public class RCRule {
     private Integer output;
     private String action;
     private Long duration;
+    @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = PositiveIntegerFilter.class)
     private Integer slaveid;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String type;
     @JsonBackReference
     @JoinColumn(name = "input_uuid", nullable=false)
     @ManyToOne(optional = false)
     private RCInput input;
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
     private List<RCAction> actions;
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL)
     private List<RCAcl> acls;
 

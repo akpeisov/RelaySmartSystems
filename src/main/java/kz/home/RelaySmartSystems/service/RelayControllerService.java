@@ -1,5 +1,7 @@
 package kz.home.RelaySmartSystems.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
@@ -9,7 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.beanutils.BeanUtils;
 
@@ -136,7 +140,6 @@ public class RelayControllerService {
             }
         }
     }
-
     public void setInputState(String mac, Integer input, String state) {
         RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
         if (c != null) {
@@ -146,6 +149,39 @@ public class RelayControllerService {
                 outputRepository.save(o);
             }
         }
+    }
+
+    public String makeDeviceConfig(String mac) {
+        // формирование конфигурации устройства для отправки на устройство
+        String json = null;
+        RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
+        if (c != null) {
+            for (RCOutput rcOutput : c.getOutputs()) {
+                rcOutput.setUuid(null);
+            }
+            c.setWifirssi(null);
+            c.setStatus(null);
+            c.setName(null);
+            c.setEthip(null);
+            c.setWifiip(null);
+            c.setVersion(null);
+            c.setFreeMemory(null);
+            c.setUptime(null);
+            c.setMac(null);
+            c.setType(null);
+            Map<String, Object> objectMap = new HashMap<>();
+            objectMap.put("type", "SETDEVICECONFIG");
+            objectMap.put("payload", c);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                json = objectMapper.writeValueAsString(objectMap);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return json;
+        // outputs
     }
 
 //    public boolean isControllerLinked(String mac) {

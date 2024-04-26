@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.NoArgsConstructor;
 
@@ -12,6 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Table(name = "rc_outputs")
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class RCOutput {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -25,11 +27,10 @@ public class RCOutput {
     @Column(name = "default")
     private String _default;
     private String state;
+
     private Boolean alice;
     private String room;
 
-    //    @JsonBackReference
-    //@JsonIgnore
     @JsonBackReference
     @ManyToOne(optional = false)  //(optional = false, cascade = CascadeType.ALL)
     @JoinColumn(name = "relay_controller_uuid", nullable=false)
@@ -37,6 +38,10 @@ public class RCOutput {
 
     public UUID getUuid() {
         return uuid;
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 
     public Integer getId() {

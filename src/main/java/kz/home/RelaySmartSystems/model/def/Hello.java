@@ -1,8 +1,12 @@
 package kz.home.RelaySmartSystems.model.def;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Hello {
     private String mac;
     private String type;
+    private String token;
 
     public String getMac() {
         return mac;
@@ -15,5 +19,13 @@ public class Hello {
     }
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 }
