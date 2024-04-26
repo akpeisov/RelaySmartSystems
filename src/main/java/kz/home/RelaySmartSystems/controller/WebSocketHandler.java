@@ -2,17 +2,22 @@ package kz.home.RelaySmartSystems.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kz.home.RelaySmartSystems.filters.IpHandshakeInterceptor;
+import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.def.Action;
 import kz.home.RelaySmartSystems.model.def.Hello;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.model.relaycontroller.RCEvent;
+import kz.home.RelaySmartSystems.model.relaycontroller.RCUpdateMessage;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
+import kz.home.RelaySmartSystems.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -23,6 +28,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 // класс для контроллеров
 @Component // иначе из конфигурации не привяжется класс
@@ -31,11 +37,15 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHandler.class);
     private final ControllerService сontrollerService;
     private final RelayControllerService relayControllerService;
+    private final JwtAuthorizationFilter jwtAuthorizationFilter;
+    private final UserService userService;
 
     public WebSocketHandler(ControllerService сontrollerService,
-                            RelayControllerService relayControllerService) {
+                            RelayControllerService relayControllerService, JwtAuthorizationFilter jwtAuthorizationFilter, UserService userService) {
         this.сontrollerService = сontrollerService;
         this.relayControllerService = relayControllerService;
+        this.jwtAuthorizationFilter = jwtAuthorizationFilter;
+        this.userService = userService;
     }
 
     @Override
@@ -90,43 +100,63 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
         if (type == null) {
             return;
         }
-        if (!"HELLO".equals(type) && wsSession.getControllerId() == null) {
-            session.sendMessage(new TextMessage(AlertMessage.makeAlert("No session identifier present")));
-            session.close();
-            return;
-        }
+//        if (!"HELLO".equals(type) && wsSession.getControllerId() == null) {
+//            session.sendMessage(new TextMessage(AlertMessage.makeAlert("No session identifier present")));
+//            session.close();
+//            return;
+//        }
 
         switch (type) {
             case "HELLO":
                 logger.info(wsTextMessage.getPayload().toString());
                 Hello hello = objectMapper.readValue(json, Hello.class);
-                String mac = hello.getMac();
-                if (mac == null) {
-                    session.sendMessage(new TextMessage(AlertMessage.makeAlert("No MAC")));
+                String token = hello.getToken();
+                TokenData tokenData = jwtAuthorizationFilter.validateToken(token, hello.getType());
+                if (tokenData.getErrorText() != null) {
+                    session.sendMessage(new TextMessage(ErrorMessage.makeError(String.format("Token error. %s. Closing connection.", tokenData.getErrorText()))));
                     session.close();
                     return;
                 }
-                setControllerIdForWSSession(session, mac);
-                setTypeForWSSession(session, hello.getType());
-                // если новое подключение с тем же маком, то надо поискать старые сессии и удалить старые
-                for (WSSession wsSessionOld : wsSessions) {
-                    if (mac.equalsIgnoreCase(wsSessionOld.getControllerId()) && !wsSessionOld.getSession().getId().equals(session.getId())) {
-                        logger.info(String.format("Removed mac %s from other session %s", mac, wsSessionOld.getSession().getId()));
-                        wsSessions.remove(wsSessionOld);
-                        wsSessionOld.getSession().close();
+                if (tokenData.getMac() == null && tokenData.getUsername() == null) {
+                    session.sendMessage(new TextMessage(ErrorMessage.makeError("No identifiers!")));
+                    session.close();
+                    return;
+                }
+                // Это клиент фронта
+                if (tokenData.getUsername() != null) {
+                    setUsernameForWSSession(session, tokenData.getUsername());
+                    User user = userService.findById(tokenData.getUsername()).orElse(null);
+                    if (user != null)
+                        setUserForWSSession(session, user);
+                    else {
+                        logger.info(String.format("User by username not found %s", tokenData.getUsername()));
+                        session.close();
                     }
                 }
-
-                logger.info(String.format("isControllerLinked %s", isControllerLinked(mac))); ;
-                if (!isControllerLinked(mac)) {
-                    сontrollerService.addController(mac.toUpperCase(), hello.getType());
-                    // попросить конфиг и заполнить таблицу
-                    // просить конфиг надо при привязке к юзеру???
-                    //sendMessageToUser(mac, getJsonRequestConfig());
-                } else {
-                    setUserForWSSession(session, сontrollerService.getUserByController(mac));
-                    if ("relaycontroller".equals(hello.getType())) {
-                        relayControllerService.setRelayControllerStatus(mac, "online");
+                setTypeForWSSession(session, hello.getType());
+                // если новое подключение с тем же маком, то надо поискать старые сессии и удалить старые
+                // если это устройство, то у него есть мак
+                if (tokenData.getMac() != null) {
+                    setControllerIdForWSSession(session, tokenData.getMac());
+                    for (WSSession wsSessionOld : wsSessions) {
+                        if (tokenData.getMac().equalsIgnoreCase(wsSessionOld.getControllerId()) && !wsSessionOld.getSession().getId().equals(session.getId())) {
+                            logger.info(String.format("Removed mac %s from other session %s", tokenData.getMac(), wsSessionOld.getSession().getId()));
+                            wsSessions.remove(wsSessionOld);
+                            wsSessionOld.getSession().close();
+                        }
+                    }
+                    logger.info(String.format("isControllerLinked %s", isControllerLinked(tokenData.getMac()))); ;
+                    if (!isControllerLinked(tokenData.getMac())) {
+                        сontrollerService.addController(tokenData.getMac().toUpperCase(), hello.getType());
+                        // попросить конфиг и заполнить таблицу
+                        // просить конфиг надо при привязке к юзеру???
+                        //sendMessageToUser(mac, getJsonRequestConfig());
+                    } else {
+                        session.sendMessage(new TextMessage(AlertMessage.makeAlert("READY")));
+                        setUserForWSSession(session, сontrollerService.getUserByController(tokenData.getMac()));
+                        if ("relaycontroller".equals(hello.getType())) {
+                            relayControllerService.setRelayControllerStatus(tokenData.getMac(), "online");
+                        }
                     }
                 }
                 break;
@@ -169,15 +199,25 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
                     }
                 }
                 break;
+            case "ACTION":
+                Action action = objectMapper.readValue(json, Action.class);
+                logger.info("sending message " + action.getAction());
+                // это действие, надо найти нужную сессию и отправить туда
+                sendMessageToUser(action.getMac(), wsTextMessage.makeMessage());
+                break;
             default:
+                logger.warn("Unknown message");
                 logger.info(wsTextMessage.getPayload().toString());
+                session.sendMessage(new TextMessage(AlertMessage.makeAlert("I receive your message, but nothing to say...")));
+                break;
         }
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         wsSessions.add(new WSSession(session));
-        logger.info(String.format("New client connected with ID %s", session.getId()));
+        String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
+        logger.info(String.format("New client connected with ID %s %s %s", session.getId(), session.getRemoteAddress(), clientIpAddress));
         super.afterConnectionEstablished(session);
     }
 
@@ -187,16 +227,17 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
         String mac = getControllerIdForWSSession(session);
         if (mac != null)
             setControllerOffline(mac);
-
+        String type = "";
         for (WSSession wsSession : wsSessions) {
             if (wsSession.getSession().equals(session)) {
+                type = wsSession.getType();
                 wsSessions.remove(wsSession);
                 break;
             }
         }
 
         //wsSessions.remove(new WSSession(session));
-        logger.info(String.format("Client disconnected with ID %s", session.getId()));
+        logger.info(String.format("Client %s disconnected with ID %s", type, session.getId()));
         super.afterConnectionClosed(session, status);
     }
 
@@ -232,6 +273,15 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
         for (WSSession wsSession : wsSessions) {
             if (wsSession.getSession().equals(targetSession)) {
                 wsSession.setControllerId(controllerId.toUpperCase());
+                break;
+            }
+        }
+    }
+
+    private void setUsernameForWSSession(WebSocketSession targetSession, String username) {
+        for (WSSession wsSession : wsSessions) {
+            if (wsSession.getSession().equals(targetSession)) {
+                wsSession.setUsername(username);
                 break;
             }
         }
@@ -324,5 +374,20 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
             //throw new RuntimeException(e);
         }
         return "ERROR";
+    }
+
+    @Scheduled(fixedRate = 5000)
+    private void test() throws IOException {
+        RCUpdateMessage rcUpdateMessage = new RCUpdateMessage();
+        rcUpdateMessage.setMac("30AEA48662E0");
+        Random rnd = new Random();
+        rcUpdateMessage.setOutput(rnd.nextInt(8));
+        rcUpdateMessage.setState(rnd.nextBoolean() ? "on" : "off");
+
+        for (WSSession wsSession : wsSessions) {
+            if (wsSession.getUsername() != null)
+                wsSession.getSession().sendMessage(new TextMessage(rcUpdateMessage.makeMessage()));
+            //"{\"type\": \"test\", \"payload\": {\"id\": 123}}"
+        }
     }
 }

@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.model;
 
 public class TokenData {
     private String username;
+    private String mac;
     private String sessionId;
     private String errorText;
     private Exception exception;
@@ -36,5 +37,13 @@ public class TokenData {
 
     public void setException(Exception exception) {
         this.exception = exception;
+    }
+
+    public String getMac() {
+        return mac;
+    }
+
+    public void setMac(String mac) {
+        this.mac = mac;
     }
 }

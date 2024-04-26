@@ -7,6 +7,7 @@ public class WSSession {
     private String controllerId;
     private String type;
     private User user;
+    private String username;
 
     public WSSession(WebSocketSession session) {
         this.session = session;
@@ -42,5 +43,13 @@ public class WSSession {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 }

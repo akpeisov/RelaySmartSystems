@@ -4,16 +4,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Hello {
-    private String mac;
+//    private String mac;
     private String type;
     private String token;
 
-    public String getMac() {
-        return mac;
-    }
-    public void setMac(String mac) {
-        this.mac = mac;
-    }
+//    public String getMac() {
+//        return mac;
+//    }
+//    public void setMac(String mac) {
+//        this.mac = mac;
+//    }
     public String getType() {
         return type;
     }

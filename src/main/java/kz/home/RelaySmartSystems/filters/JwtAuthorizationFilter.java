@@ -23,16 +23,21 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     private static final String KeyForFront = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt8Er1XsuNHhpnenX5VlTk0rY+nrx8dGl1jVFH9zTSdjm4x1GbA/JCyQB+fSzuEojj61lt8ywbRje/Ur0SlHeIFQHtenvIaMuNqC3vrFurmMcMHXWSpgeDvuzvyKE3caQhUZWsrW3LC4xgvYSi1d+DbCMZpdJdMexhXpFma+932Ftg6FbZ8D27fR/vRHCFnY72FxSLup93cG9jPGKKmpWamfTkdX+uZC/my0AdGE6WWMJPIfNRunKAiucqTKeqSJLLQ+FF+yZ25mWkDtMufO4mqvdgKDBt2mYAQn+dj1DpX7tzFlFvgcCbl/cD0e+Jvh35Kh+UQxWtauhdKKbqGPu1wIDAQAB";
     private static final String KeyForESP = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzKJvjOk84SPdY+bhzCaEdQNQcY9ekCWGHpwopXtEFoRi0kbTP+5hBN+nPCftuD2VGnxpW1qQwegWa4TkyL/CVDZE2BiotXHuMyfVQKC+YHyfJ/LgRkG119RD1YB9swn0UCO/recaGHcOd4UMaJOvuJf85zNs5CCIN85b6oIEMzbzRvZNvJqya2ZmG6/+nWW2RooKhHTwpNkKAjBaPygUjkr5744yxb6Q1tbow/CJlofPz8YmerkWmUEB3nbvqEsJp0wfgIU51WZL2OW1e0ndABHqv0tfqJbfFgmWjHY02YE9r01YuWOVfn2fQ0xI7pQO0FlNCzI0MpiCPk2/IB4XWQIDAQAB";
 
-    public TokenData validateToken(String token) {
+    public TokenData validateToken(String token, String type) {
+        String publicKey = KeyForESP;
+        if ("web".equalsIgnoreCase(type)) {
+            publicKey = KeyForFront;
+        }
         TokenData tokenData = new TokenData();
         if (token != null) {
             try {
                 //Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
-                Claims claims = Jwts.parser().verifyWith(generateJwtKeyDecryption(KeyForFront))
+                Claims claims = Jwts.parser().verifyWith(generateJwtKeyDecryption(publicKey))
                         .build()
                         .parseSignedClaims(token)
                         .getPayload();
                 tokenData.setUsername(claims.get("preferred_username", String.class));
+                tokenData.setMac(claims.get("mac", String.class));
                 //claims.getSubject(); // Имя пользователя preferred_username
 
 //                Date expirationDate = claims.getExpiration();
@@ -69,7 +74,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         String token = extractJwtFromHeader(request);
         //logger.info(String.format("token %s", token));
         request.setAttribute("token", token);
-        TokenData tokenData = validateToken(token);
+        TokenData tokenData = validateToken(token, "web");
 //        if (tokenData.getErrorText() != null) {
             //throw new RuntimeException (tokenData.getException());
             //return;
