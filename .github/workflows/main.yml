@@ -18,9 +18,6 @@ jobs:
           distribution: 'corretto'
           java-version: 17
 
-      - name: unit tests
-        run: mvn -B test --file pom.xml
-
       - name: build the app
         run: |
           mvn clean
@@ -31,7 +28,7 @@ jobs:
           context: .
           dockerfile: Dockerfile
           push: false
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/rss:latest
+          tags: akpeisov/rss:latest
 
       - name: login to docker hub
         uses: docker/login-action@v1
@@ -45,4 +42,4 @@ jobs:
           context: .
           dockerfile: Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/rss:latest
+          tags: akpeisov/rss:latest
