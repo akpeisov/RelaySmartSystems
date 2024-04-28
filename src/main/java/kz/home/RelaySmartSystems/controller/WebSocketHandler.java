@@ -32,7 +32,7 @@ import java.util.Random;
 
 // класс для контроллеров
 @Component // иначе из конфигурации не привяжется класс
-public class WebSocketHandler extends TextWebSocketHandler implements ApplicationListener<WSEvent> {
+public class WebSocketHandler extends TextWebSocketHandler {
     private static final ArrayList<WSSession> wsSessions = new ArrayList<WSSession>();
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHandler.class);
     private final ControllerService сontrollerService;
@@ -48,21 +48,21 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
         this.userService = userService;
     }
 
-    @Override
-    public void onApplicationEvent(WSEvent event) {
-        // Обработка события
-        try {
-            WSTextMessage wsTextMessage = (WSTextMessage) event.getSource();
-            if ("ACTION".equals(wsTextMessage.getType())) {
-                // это действие, надо найти нужную сессию и отправить туда
-                Action action = (Action)wsTextMessage.getPayload();
-                String mac = action.getMac();
-                sendMessageToUser(mac, wsTextMessage.makeMessage());
-            }
-        } catch (Exception e) {
-
-        }
-    }
+//    @Override
+//    public void onApplicationEvent(WSEvent event) {
+//        // Обработка события
+//        try {
+//            WSTextMessage wsTextMessage = (WSTextMessage) event.getSource();
+//            if ("ACTION".equals(wsTextMessage.getType())) {
+//                // это действие, надо найти нужную сессию и отправить туда
+//                Action action = (Action)wsTextMessage.getPayload();
+//                String mac = action.getMac();
+//                sendMessageToUser(mac, wsTextMessage.makeMessage());
+//            }
+//        } catch (Exception e) {
+//
+//        }
+//    }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -197,13 +197,20 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
                     } else if (event.getInput() != null) {
                         relayControllerService.setInputState(wsSession.getControllerId(), event.getInput(), event.getEvent());
                     }
+                    // найти пользователя, у которого есть этот контроллер, затем найти все его сессии и отправить туда
+                    User user = relayControllerService.getUser(wsSession.getControllerId());
+                    if (user != null) {
+                        SendMessageToWebUser(user, wsTextMessage.makeMessage());
+                    }
                 }
                 break;
             case "ACTION":
-                Action action = objectMapper.readValue(json, Action.class);
-                logger.info("sending message " + action.getAction());
-                // это действие, надо найти нужную сессию и отправить туда
-                sendMessageToUser(action.getMac(), wsTextMessage.makeMessage());
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    Action action = objectMapper.readValue(json, Action.class);
+                    logger.info("sending message to controller" + action.getAction());
+                    // это действие, надо найти нужную сессию и отправить туда
+                    SendMessageToController(action.getMac(), wsTextMessage.makeMessage());
+                }
                 break;
             default:
                 logger.warn("Unknown message");
@@ -246,7 +253,7 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
         logger.info(String.format("handleTransportError with ID %s", session.getId()));
     }
 
-    public String sendMessageToUser(String controllerId, String message) {
+    public String SendMessageToController(String controllerId, String message) {
         if (controllerId == null)
             return "MAC_NULL";
 
@@ -262,6 +269,27 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
                     return "ERROR";
                 }
                 break;
+            }
+        }
+        return "NOT_FOUND";
+    }
+
+    public String SendMessageToWebUser(User user, String message) {
+        // Отправка сообщения во все пользовательские сессии
+        if (user == null)
+            return "USER_NULL";
+
+        for (WSSession session: wsSessions) {
+            if (user.equals(session.getUser())) {
+                try {
+                    if (session.getSession().isOpen()) {
+                        session.getSession().sendMessage(new TextMessage(message));
+                        return "OK";
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return "ERROR";
+                }
             }
         }
         return "NOT_FOUND";
@@ -343,7 +371,7 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
     }
 
     public void requestControllerConfig(String mac) {
-        sendMessageToUser(mac, getJsonRequestConfig());
+        SendMessageToController(mac, getJsonRequestConfig());
     }
 
     void setControllerOffline(String mac) {
@@ -369,7 +397,7 @@ public class WebSocketHandler extends TextWebSocketHandler implements Applicatio
             ObjectMapper objectMapper = new ObjectMapper();
             String json = objectMapper.writeValueAsString(objectMap);
             logger.info(json);
-            return sendMessageToUser(mac, json);
+            return SendMessageToController(mac, json);
         } catch (JsonProcessingException e) {
             //throw new RuntimeException(e);
         }

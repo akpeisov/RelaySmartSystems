@@ -119,6 +119,8 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
+
+		<finalName>rss</finalName>
 	</build>
 
 </project>

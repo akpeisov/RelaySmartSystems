@@ -184,6 +184,14 @@ public class RelayControllerService {
         // outputs
     }
 
+    public User getUser(String mac) {
+        RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
+        if (c != null) {
+            return c.getUser();
+        }
+        return null;
+    }
+
 //    public boolean isControllerLinked(String mac) {
 //        RelayController rc = relayControllerRepository.findByMac(mac);
 //        return rc != null;

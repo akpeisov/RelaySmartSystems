@@ -18,7 +18,7 @@ public class SocketController {
     @PostMapping("/ws")
     public ResponseEntity<?> testWS(@RequestBody TestMessage testMessage) {
         String response;
-        response = socketHandler.sendMessageToUser(testMessage.getId(), testMessage.getMessage());
+        response = socketHandler.SendMessageToController(testMessage.getId(), testMessage.getMessage());
         return ResponseEntity.ok().body(response);
     }
 

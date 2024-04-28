@@ -154,7 +154,7 @@ public class WebAPI {
         if (json == null) {
             return ResponseEntity.status(404).body("Config not found");
         }
-        String res = webSocketHandler.sendMessageToUser(mac, json);
+        String res = webSocketHandler.SendMessageToController(mac, json);
         if (!"OK".equals(res)) {
             return ResponseEntity.status(400).body(String.format("Error while sending message %s", res));
         }

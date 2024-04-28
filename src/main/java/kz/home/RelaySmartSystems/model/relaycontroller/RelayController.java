@@ -152,4 +152,8 @@ public class RelayController {
     public void setWifirssi(Integer wifirssi) {
         this.wifirssi = wifirssi;
     }
+
+    public User getUser() {
+        return user;
+    }
 }
