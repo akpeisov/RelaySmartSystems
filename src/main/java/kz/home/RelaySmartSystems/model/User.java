@@ -28,6 +28,14 @@ public class User {
 //        this.lastName = lastName;
 //    }
 
+
+    @Override
+    public boolean equals(Object obj) {
+        User user2 = (User)obj;
+        return user2.getId().equals(this.getId());
+        //return super.equals(obj);
+    }
+
     public String getId() {
         return id;
     }

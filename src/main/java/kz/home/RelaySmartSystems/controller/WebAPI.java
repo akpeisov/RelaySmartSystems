@@ -1,8 +1,11 @@
 package kz.home.RelaySmartSystems.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.Controller;
 import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.UserDevices;
+import kz.home.RelaySmartSystems.model.WSSession;
+import kz.home.RelaySmartSystems.model.dto.WSSessionDTO;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import kz.home.RelaySmartSystems.service.ControllerService;
@@ -10,16 +13,21 @@ import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/webapi")
-//@CrossOrigin(origins = "http://localhost:8888")
+//@CrossOrigin(origins = "http://localhost")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class WebAPI {
     private static final Logger logger = LoggerFactory.getLogger(WebAPI.class);
     private final RelayControllerRepository relayControllerRepository;
@@ -59,10 +67,20 @@ public class WebAPI {
         UserDevices userDevices = new UserDevices();
         userDevices.setUsername(username);
         userDevices.setUserfio(user.getFio());
-        List<RelayController> relayControllers = relayControllerRepository.findByUser(user);
-        userDevices.setRelayControllers(relayControllers);
+        List<Controller> controllers = controllerService.getUserControllers(user);
+        for (Controller controller : controllers) {
+            if ("relaycontroller".equals(controller.getType())) {
+                controller.setControllerData(relayControllerRepository.findByMac(controller.getMac()));
+            }
+        }
+        userDevices.setControllers(controllers);
+//        List<RelayController> relayControllers = relayControllerRepository.findByUser(user);
+//        userDevices.setRelayControllers(relayControllers);
         // TODO : add other controllers types (uni...)
 
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.add("Access-Control-Allow-Origin", "*");
+        //return ResponseEntity.ok().headers(headers).body(userDevices);
         return ResponseEntity.ok().body(userDevices);
     }
 
@@ -160,5 +178,25 @@ public class WebAPI {
         }
         return ResponseEntity.ok().body("Config sent");
     }
+
+    @GetMapping(path = "/getWSSessions")
+    public ResponseEntity<?> getWSSessiona(HttpServletRequest request) {
+        List<WSSession> wsSessions = webSocketHandler.getCurrentWSSessions();
+
+        List<WSSessionDTO> wsSessionDTOS = new ArrayList<>();
+        for (WSSession wsSession : wsSessions) {
+            WSSessionDTO wsSessionDTO = new WSSessionDTO();
+            wsSessionDTO.setClientIP(wsSession.getClientIP());
+            wsSessionDTO.setType(wsSession.getType());
+            wsSessionDTO.setControllerId(wsSession.getControllerId());
+            wsSessionDTO.setConnectionDate(wsSession.getConnectionDate());
+            wsSessionDTO.setUsername(wsSession.getUsername());
+            wsSessionDTOS.add(wsSessionDTO);
+        }
+
+        return ResponseEntity.ok().body(wsSessionDTOS);
+    }
+
+
 
 }

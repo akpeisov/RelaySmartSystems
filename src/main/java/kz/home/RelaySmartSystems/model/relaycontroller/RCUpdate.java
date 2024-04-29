@@ -1,22 +1,20 @@
 package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kz.home.RelaySmartSystems.model.AlertMessage;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class RCUpdateMessage {
+public class RCUpdate {
     private String mac;
     private String state;
     private Integer output;
     private Integer input;
     private Integer slaveId;
-
+    private Integer timer;
 
     public String makeMessage() {
         Map<String, Object> objectMap = new HashMap<>();
@@ -71,5 +69,13 @@ public class RCUpdateMessage {
 
     public void setSlaveId(Integer slaveId) {
         this.slaveId = slaveId;
+    }
+
+    public Integer getTimer() {
+        return timer;
+    }
+
+    public void setTimer(Integer timer) {
+        this.timer = timer;
     }
 }

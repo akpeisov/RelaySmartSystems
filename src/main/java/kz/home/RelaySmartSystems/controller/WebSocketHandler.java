@@ -9,14 +9,13 @@ import kz.home.RelaySmartSystems.model.def.Action;
 import kz.home.RelaySmartSystems.model.def.Hello;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.model.relaycontroller.RCEvent;
-import kz.home.RelaySmartSystems.model.relaycontroller.RCUpdateMessage;
+import kz.home.RelaySmartSystems.model.relaycontroller.RCUpdate;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -25,10 +24,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.time.LocalDateTime;
+import java.util.*;
 
 // класс для контроллеров
 @Component // иначе из конфигурации не привяжется класс
@@ -189,25 +186,29 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     relayControllerService.addRelayController(relayController, user);
                 }
                 break;
-            case "EVENT":
+            case "UPDATE":
                 if ("relaycontroller".equals(wsSession.getType())) {
-                    RCEvent event = objectMapper.readValue(json, RCEvent.class);
-                    if (event.getOutput() != null) {
-                        relayControllerService.setOutputState(wsSession.getControllerId(), event.getOutput(), event.getEvent());
-                    } else if (event.getInput() != null) {
-                        relayControllerService.setInputState(wsSession.getControllerId(), event.getInput(), event.getEvent());
+                    RCUpdate update = objectMapper.readValue(json, RCUpdate.class);
+                    //RCEvent event = objectMapper.readValue(json, RCEvent.class);
+                    if (update.getOutput() != null) {
+                        relayControllerService.setOutputState(wsSession.getControllerId(), update.getOutput(), update.getState());
+                    } else if (update.getInput() != null) {
+                        relayControllerService.setInputState(wsSession.getControllerId(), update.getInput(), update.getState());
                     }
                     // найти пользователя, у которого есть этот контроллер, затем найти все его сессии и отправить туда
                     User user = relayControllerService.getUser(wsSession.getControllerId());
                     if (user != null) {
+                        logger.info(String.format("User found %s", user.getFio()));
                         SendMessageToWebUser(user, wsTextMessage.makeMessage());
+                    } else {
+                        logger.error("User not found");
                     }
                 }
                 break;
             case "ACTION":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Action action = objectMapper.readValue(json, Action.class);
-                    logger.info("sending message to controller" + action.getAction());
+                    logger.info(String.format("Sending message %s to controller %s", action.getAction(), action.getMac()));
                     // это действие, надо найти нужную сессию и отправить туда
                     SendMessageToController(action.getMac(), wsTextMessage.makeMessage());
                 }
@@ -222,8 +223,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        wsSessions.add(new WSSession(session));
+        WSSession wsSession = new WSSession(session);
+        wsSession.setConnectionDate(LocalDateTime.now());
         String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
+        wsSession.setClientIP(clientIpAddress == null ? session.getRemoteAddress().toString() : clientIpAddress);
+        wsSessions.add(wsSession);
         logger.info(String.format("New client connected with ID %s %s %s", session.getId(), session.getRemoteAddress(), clientIpAddress));
         super.afterConnectionEstablished(session);
     }
@@ -250,7 +254,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        logger.info(String.format("handleTransportError with ID %s", session.getId()));
+        logger.info(String.format("handleTransportError with ID %s %s", session.getId(), exception.getMessage()));
     }
 
     public String SendMessageToController(String controllerId, String message) {
@@ -274,25 +278,23 @@ public class WebSocketHandler extends TextWebSocketHandler {
         return "NOT_FOUND";
     }
 
-    public String SendMessageToWebUser(User user, String message) {
+    public void SendMessageToWebUser(User user, String message) {
         // Отправка сообщения во все пользовательские сессии
         if (user == null)
-            return "USER_NULL";
+            return;
 
         for (WSSession session: wsSessions) {
-            if (user.equals(session.getUser())) {
+            if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {
                 try {
                     if (session.getSession().isOpen()) {
                         session.getSession().sendMessage(new TextMessage(message));
-                        return "OK";
+                        logger.info(String.format("Message to user %s sent", user.getFio()));
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                    return "ERROR";
                 }
             }
         }
-        return "NOT_FOUND";
     }
 
     private void setControllerIdForWSSession(WebSocketSession targetSession, String controllerId) {
@@ -404,9 +406,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
         return "ERROR";
     }
 
-    @Scheduled(fixedRate = 5000)
+//    @Scheduled(fixedRate = 5000)
     private void test() throws IOException {
-        RCUpdateMessage rcUpdateMessage = new RCUpdateMessage();
+        RCUpdate rcUpdateMessage = new RCUpdate();
         rcUpdateMessage.setMac("30AEA48662E0");
         Random rnd = new Random();
         rcUpdateMessage.setOutput(rnd.nextInt(8));
@@ -417,5 +419,17 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 wsSession.getSession().sendMessage(new TextMessage(rcUpdateMessage.makeMessage()));
             //"{\"type\": \"test\", \"payload\": {\"id\": 123}}"
         }
+    }
+    @Scheduled(fixedRate = 5000)
+    private void alive() throws IOException {
+        for (WSSession wsSession : wsSessions) {
+            if ("web".equalsIgnoreCase(wsSession.getType())) {
+                wsSession.getSession().sendMessage(new TextMessage(AlertMessage.makeAlert("alive")));
+            }
+        }
+    }
+
+    public List<WSSession> getCurrentWSSessions() {
+        return wsSessions;
     }
 }

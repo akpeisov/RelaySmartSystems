@@ -21,6 +21,7 @@ public class RelayController {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
     private String mac;
+    @JsonIgnore
     @ManyToOne
     private User user;
     private String type;

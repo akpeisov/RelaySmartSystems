@@ -7,8 +7,8 @@ import java.util.List;
 public class UserDevices {
     String username;
     String userfio;
-    List<RelayController> relayControllers;
-
+//    List<RelayController> relayControllers;
+    List<Controller> controllers;
     public String getUsername() {
         return username;
     }
@@ -24,11 +24,19 @@ public class UserDevices {
     public void setUserfio(String userfio) {
         this.userfio = userfio;
     }
-    public List<RelayController> getRelayControllers() {
-        return relayControllers;
+
+    public List<Controller> getControllers() {
+        return controllers;
     }
 
-    public void setRelayControllers(List<RelayController> relayControllers) {
-        this.relayControllers = relayControllers;
+    public void setControllers(List<Controller> controllers) {
+        this.controllers = controllers;
     }
+    //    public List<RelayController> getRelayControllers() {
+//        return relayControllers;
+//    }
+//
+//    public void setRelayControllers(List<RelayController> relayControllers) {
+//        this.relayControllers = relayControllers;
+//    }
 }

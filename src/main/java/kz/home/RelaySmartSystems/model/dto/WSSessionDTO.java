@@ -1,37 +1,22 @@
-package kz.home.RelaySmartSystems.model;
+package kz.home.RelaySmartSystems.model.dto;
 
-import org.springframework.web.socket.WebSocketSession;
+import kz.home.RelaySmartSystems.model.User;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
-public class WSSession {
-    private WebSocketSession session;
+public class WSSessionDTO {
     private String controllerId;
     private String type;
-    private User user;
     private String username;
     private LocalDateTime connectionDate;
     private String clientIP;
 
-    public WSSession(WebSocketSession session) {
-        this.session = session;
-    }
-
-    public WebSocketSession getSession() {
-        return session;
-    }
-
-    public void setSession(WebSocketSession session) {
-        this.session = session;
-    }
-
     public String getControllerId() {
-        return controllerId == null ? null : controllerId.toUpperCase();
+        return controllerId;
     }
 
     public void setControllerId(String controllerId) {
-        this.controllerId = controllerId.toUpperCase();
+        this.controllerId = controllerId;
     }
 
     public String getType() {
@@ -40,14 +25,6 @@ public class WSSession {
 
     public void setType(String type) {
         this.type = type;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
     }
 
     public String getUsername() {

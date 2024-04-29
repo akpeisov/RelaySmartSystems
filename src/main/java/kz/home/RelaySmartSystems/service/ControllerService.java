@@ -7,6 +7,7 @@ import kz.home.RelaySmartSystems.repository.ControllerRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class ControllerService {
@@ -65,5 +66,9 @@ public class ControllerService {
         if (controller != null)
             return controller.getUser();
         return null;
+    }
+
+    public List<Controller> getUserControllers(User user) {
+        return controllerRepository.findByUser(user);
     }
 }
