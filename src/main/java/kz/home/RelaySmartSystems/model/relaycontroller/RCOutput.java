@@ -27,9 +27,10 @@ public class RCOutput {
     @Column(name = "default")
     private String _default;
     private String state;
-
     private Boolean alice;
     private String room;
+    private Integer on;
+    private Integer off;
 
     @JsonBackReference
     @ManyToOne(optional = false)  //(optional = false, cascade = CascadeType.ALL)
@@ -121,5 +122,21 @@ public class RCOutput {
 
     public void setRoom(String room) {
         this.room = room;
+    }
+
+    public Integer getOn() {
+        return on;
+    }
+
+    public void setOn(Integer on) {
+        this.on = on;
+    }
+
+    public Integer getOff() {
+        return off;
+    }
+
+    public void setOff(Integer off) {
+        this.off = off;
     }
 }

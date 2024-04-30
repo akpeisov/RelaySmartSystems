@@ -5,15 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
+import kz.home.RelaySmartSystems.repository.RCInputRepository;
 import kz.home.RelaySmartSystems.repository.RCOutputRepository;
+import kz.home.RelaySmartSystems.repository.RCRuleRepository;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.commons.beanutils.BeanUtils;
 
@@ -21,10 +21,16 @@ import org.apache.commons.beanutils.BeanUtils;
 public class RelayControllerService {
     private final RelayControllerRepository relayControllerRepository;
     private final RCOutputRepository outputRepository;
-
-    public RelayControllerService(RelayControllerRepository relayControllerRepository, RCOutputRepository outputRepository) {
+    private final RCInputRepository inputRepository;
+    private final RCRuleRepository rcRuleRepository;
+    public RelayControllerService(RelayControllerRepository relayControllerRepository,
+                                  RCOutputRepository outputRepository,
+                                  RCInputRepository inputRepository,
+                                  RCRuleRepository rcRuleRepository) {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
+        this.inputRepository = inputRepository;
+        this.rcRuleRepository = rcRuleRepository;
     }
 
     public RelayController addRelayController(RelayController relayController, User user) {
@@ -40,7 +46,7 @@ public class RelayControllerService {
 
             // Создаем новый
             newRelayController.setMac(relayController.getMac());
-            newRelayController.setName(relayController.getName());
+//            newRelayController.setName(relayController.getName());
             newRelayController.setUser(user);
 
             // outputs
@@ -105,28 +111,37 @@ public class RelayControllerService {
         return relayControllerRepository.save(newRelayController);
     }
 
-    public String setRelayControllerInfo(Info info) {
-        RelayController c = relayControllerRepository.findByMac(info.getMac().toUpperCase());
-        if (c != null) {
-            c.setUptime(info.getUptimeraw());
-            c.setFreeMemory(info.getFreememory());
-            c.setVersion(info.getVersion());
-            c.setEthip(info.getEthip());
-            c.setWifiip(info.getWifiip());
-            c.setName(info.getDevicename());
-            c.setDescription(info.getDescription());
-            c.setWifirssi(info.getRssi());
-            relayControllerRepository.save(c);
-            return "OK";
+    public void updateRelayController(RelayController relayController) {
+        RelayController newRelayController = new RelayController();
+        // найти существующий контроллер
+        String mac = relayController.getMac();
+        RelayController existingRelayController = relayControllerRepository.findByMac(mac);
+        if (existingRelayController == null) {
+            // контролер не найден
+            return;
         }
-        return "NOT_FOUND";
-    }
 
-    public void setRelayControllerStatus(String mac, String status) {
-        RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
-        if (c != null) {
-            c.setStatus(status);
-            relayControllerRepository.save(c);
+        // outputs
+        for (RCOutput output : relayController.getOutputs()) {
+            RCOutput o = outputRepository.findOutput(existingRelayController.getUuid(), output.getId());
+            if (o != null) {
+                o.setState(output.getState());
+                //o.setName(output.getName());
+                //o.setOff(output.getOff());
+                //o.setOn(output.getOn());
+                outputRepository.save(o);
+            }
+        }
+
+        // inputs
+        for (RCInput input : relayController.getInputs()) {
+            RCInput i = inputRepository.findInput(existingRelayController.getUuid(), input.getId());
+            if (i != null) {
+                //i.setName(input.getName());
+                //i.setType(input.getType());
+                i.setState(input.getState());
+                inputRepository.save(i);
+            }
         }
     }
 
@@ -143,10 +158,10 @@ public class RelayControllerService {
     public void setInputState(String mac, Integer input, String state) {
         RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
         if (c != null) {
-            RCOutput o = outputRepository.findInput(c.getUuid(), input);
+            RCInput o = inputRepository.findInput(c.getUuid(), input);
             if (o != null) {
                 o.setState(state);
-                outputRepository.save(o);
+                inputRepository.save(o);
             }
         }
     }
@@ -159,16 +174,7 @@ public class RelayControllerService {
             for (RCOutput rcOutput : c.getOutputs()) {
                 rcOutput.setUuid(null);
             }
-            c.setWifirssi(null);
-            c.setStatus(null);
-            c.setName(null);
-            c.setEthip(null);
-            c.setWifiip(null);
-            c.setVersion(null);
-            c.setFreeMemory(null);
-            c.setUptime(null);
             c.setMac(null);
-            c.setType(null);
             Map<String, Object> objectMap = new HashMap<>();
             objectMap.put("type", "SETDEVICECONFIG");
             objectMap.put("payload", c);
@@ -192,16 +198,72 @@ public class RelayControllerService {
         return null;
     }
 
-//    public boolean isControllerLinked(String mac) {
-//        RelayController rc = relayControllerRepository.findByMac(mac);
-//        return rc != null;
-//    }
+    public void updateOutput(RCUpdateOutput rcUpdateOutput) {
+        RelayController controller = relayControllerRepository.findByMac(rcUpdateOutput.getMac());
+        if (controller != null) {
+            RCOutput rcOutput = outputRepository.findOutput(controller.getUuid(), rcUpdateOutput.getId());
+            if (rcUpdateOutput.getName() != null)
+                rcOutput.setName(rcUpdateOutput.getName());
+            if (rcUpdateOutput.getAlice() != null)
+                rcOutput.setAlice(rcUpdateOutput.getAlice());
+            if (rcUpdateOutput.getDuration() != null)
+                rcOutput.setDuration(rcUpdateOutput.getDuration());
+            if (rcUpdateOutput.getOff() != null)
+                rcOutput.setOff(rcUpdateOutput.getOff());
+            if (rcUpdateOutput.getOn() != null)
+                rcOutput.setOn(rcUpdateOutput.getOn());
+            if (rcUpdateOutput.getType() != null)
+                rcOutput.setType(rcUpdateOutput.getType());
+            if (rcUpdateOutput.get_default() != null)
+                rcOutput.set_default(rcUpdateOutput.get_default());
+            outputRepository.save(rcOutput);
+        }
+    }
 
-    /*
-    Добавление устройства
-    * ситуация 1. В базе пусто, подключаем новое устройство.
-    * ситуация 2. В базе что-то есть, подключаем новое устройство. Базу чистить при этом?
-    Обновление информации.
-    * ситуация 3. В базе уже ранее был конфиг, но устройство стерлось, поломалось, после ремонта. Тогда оно уже привязано и можно слить конфигу?
-    * */
+    public void updateInput(RCUpdateInput rcUpdateInput) {
+        RelayController controller = relayControllerRepository.findByMac(rcUpdateInput.getMac());
+        if (controller != null) {
+            RCInput rcInput = inputRepository.findInput(controller.getUuid(), rcUpdateInput.getId());
+            if (rcInput != null) {
+                if (rcUpdateInput.getName() != null)
+                    rcInput.setName(rcUpdateInput.getName());
+                if (rcUpdateInput.getType() != null)
+                    rcInput.setType(rcUpdateInput.getType());
+//                if (rcUpdateInput.getRules() != null)
+//                    rcInput.setRules(rcUpdateInput.getRules());
+
+                // Обработка правил
+                List<RCRule> existingRules = rcInput.getRules();
+                List<RCRule> rulesToUpdate = new ArrayList<>();
+
+                // идем по новым правилам
+                for (RCRule ruleRequest : rcUpdateInput.getRules()) {
+                    Optional<RCRule> existingRule = existingRules.stream()
+                            .filter(rule -> rule.getCompareId().equals(ruleRequest.getCompareId()))
+                            .findFirst();
+
+                    RCRule newRule = existingRule.orElseGet(RCRule::new);
+                    newRule.setEvent(ruleRequest.getEvent());
+                    newRule.setAction(ruleRequest.getAction());
+                    newRule.setSlaveid(ruleRequest.getSlaveid());
+                    newRule.setOutput(ruleRequest.getOutput());
+                    newRule.setType(ruleRequest.getType());
+                    newRule.setDuration(ruleRequest.getDuration());
+                    newRule.setInput(rcInput);
+                    rulesToUpdate.add(newRule);
+                }
+
+                // Удаление лишних правил
+                List<RCRule> rulesToDelete = existingRules.stream()
+                        .filter(rule -> rulesToUpdate.stream().noneMatch(r -> r.getCompareId().equals(rule.getCompareId())))
+                        .collect(Collectors.toList());
+                
+                //rcRuleRepository.deleteAll(rulesToDelete);
+                //rulesToDelete.forEach(rcRuleRepository::delete);
+                rulesToDelete.forEach(rcRule -> rcRuleRepository.deleteRule(rcRule.getUuid()));
+                rcInput.setRules(rulesToUpdate);
+                inputRepository.save(rcInput);
+            }
+        }
+    }
 }

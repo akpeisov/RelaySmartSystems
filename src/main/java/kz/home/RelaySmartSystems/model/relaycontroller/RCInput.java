@@ -19,7 +19,8 @@ public class RCInput {
     private Integer id;
     private String name;
     private String type;
-    @OneToMany(mappedBy = "input", cascade = CascadeType.ALL) // без cascade = CascadeType.ALL при вставке не добавляются rules
+    private String state;
+    @OneToMany(mappedBy = "input", cascade = CascadeType.ALL) // без cascade = CascadeType.ALL при вставке не добавляются rules. Но и не удаляются все... а CascadeType.REMOVE удаляет, но не добавляет
     private List<RCRule> rules;
     @JsonBackReference
     @JoinColumn(name = "relay_controller_uuid", nullable=false)
@@ -63,5 +64,13 @@ public class RCInput {
     }
     public void setRelayController(RelayController relayController) {
         this.relayController = relayController;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
     }
 }

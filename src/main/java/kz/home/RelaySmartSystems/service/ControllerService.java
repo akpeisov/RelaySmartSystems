@@ -2,7 +2,7 @@ package kz.home.RelaySmartSystems.service;
 
 import kz.home.RelaySmartSystems.model.Controller;
 import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
+import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.repository.ControllerRepository;
 import org.springframework.stereotype.Service;
 
@@ -71,4 +71,30 @@ public class ControllerService {
     public List<Controller> getUserControllers(User user) {
         return controllerRepository.findByUser(user);
     }
+
+    public String setControllerInfo(Info info) {
+        Controller c = controllerRepository.findByMac(info.getMac().toUpperCase());
+        if (c != null) {
+            c.setUptime(info.getUptimeraw());
+            c.setFreeMemory(info.getFreememory());
+            c.setVersion(info.getVersion());
+            c.setEthip(info.getEthip());
+            c.setWifiip(info.getWifiip());
+            c.setName(info.getDevicename());
+            c.setDescription(info.getDescription());
+            c.setWifirssi(info.getRssi());
+            controllerRepository.save(c);
+            return "OK";
+        }
+        return "NOT_FOUND";
+    }
+
+    public void setControllerStatus(String mac, String status) {
+        Controller c = controllerRepository.findByMac(mac.toUpperCase());
+        if (c != null) {
+            c.setStatus(status);
+            controllerRepository.save(c);
+        }
+    }
+
 }

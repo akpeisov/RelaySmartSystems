@@ -1,6 +1,7 @@
 package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import kz.home.RelaySmartSystems.filters.PositiveIntegerFilter;
 import lombok.NoArgsConstructor;
@@ -13,6 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Table(name = "rc_rules")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RCRule {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -66,7 +68,7 @@ public class RCRule {
     }
 
     public Integer getSlaveid() {
-        return slaveid;
+        return slaveid == null ? 0 : slaveid;
     }
 
     public void setSlaveid(Integer slaveid) {
@@ -103,5 +105,13 @@ public class RCRule {
 
     public void setInput(RCInput input) {
         this.input = input;
+    }
+
+    public String getCompareId() {
+        return String.format("%s%d%s%d%s", event, output, action, slaveid, type);
+    }
+
+    public UUID getUuid() {
+        return uuid;
     }
 }

@@ -6,6 +6,8 @@ import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.UserDevices;
 import kz.home.RelaySmartSystems.model.WSSession;
 import kz.home.RelaySmartSystems.model.dto.WSSessionDTO;
+import kz.home.RelaySmartSystems.model.relaycontroller.RCInput;
+import kz.home.RelaySmartSystems.model.relaycontroller.RCUpdateInput;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import kz.home.RelaySmartSystems.service.ControllerService;
@@ -102,6 +104,9 @@ public class WebAPI {
         }
 
         Controller controller = controllerService.findController(mac);
+        if (controller == null) {
+            return ResponseEntity.status(404).body("Device not found");
+        }
         if (controller.getUser() != null) {
             // уже есть какой-то юзер, что делаем?
             // если это этот же юзер или другой???
@@ -197,6 +202,11 @@ public class WebAPI {
         return ResponseEntity.ok().body(wsSessionDTOS);
     }
 
-
-
+    @PostMapping(path = "/updateRCInput", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateRCInput(@RequestBody RCUpdateInput request) {
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        RCUpdateInput rcUpdateInput = objectMapper.readValue(request.get, RCUpdateInput.class);
+        relayControllerService.updateInput(request);
+        return ResponseEntity.ok().body("ok");
+    }
 }
