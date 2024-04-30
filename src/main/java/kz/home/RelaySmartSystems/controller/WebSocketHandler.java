@@ -8,7 +8,6 @@ import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.def.Action;
 import kz.home.RelaySmartSystems.model.def.Hello;
 import kz.home.RelaySmartSystems.model.def.Info;
-import kz.home.RelaySmartSystems.model.relaycontroller.RCEvent;
 import kz.home.RelaySmartSystems.model.relaycontroller.RCUpdate;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.service.ControllerService;
@@ -135,25 +134,30 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // если это устройство, то у него есть мак
                 if (tokenData.getMac() != null) {
                     setControllerIdForWSSession(session, tokenData.getMac());
+
+                    WSSession sessionToDel = null;
                     for (WSSession wsSessionOld : wsSessions) {
                         if (tokenData.getMac().equalsIgnoreCase(wsSessionOld.getControllerId()) && !wsSessionOld.getSession().getId().equals(session.getId())) {
                             logger.info(String.format("Removed mac %s from other session %s", tokenData.getMac(), wsSessionOld.getSession().getId()));
-                            wsSessions.remove(wsSessionOld);
+                            //wsSessions.remove(wsSessionOld); // java.util.ConcurrentModificationException: null Нельзя удалять из коллекции при итерировании
+                            sessionToDel = wsSessionOld;
                             wsSessionOld.getSession().close();
+                            break;
                         }
                     }
-                    logger.info(String.format("isControllerLinked %s", isControllerLinked(tokenData.getMac()))); ;
+                    if (sessionToDel != null)
+                        wsSessions.remove(sessionToDel);
+
+                    сontrollerService.setControllerStatus(tokenData.getMac(), "online");
+                    logger.info(String.format("isControllerLinked %s %s", tokenData.getMac(), isControllerLinked(tokenData.getMac()))); ;
                     if (!isControllerLinked(tokenData.getMac())) {
                         сontrollerService.addController(tokenData.getMac().toUpperCase(), hello.getType());
-                        // попросить конфиг и заполнить таблицу
-                        // просить конфиг надо при привязке к юзеру???
-                        //sendMessageToUser(mac, getJsonRequestConfig());
+                        logger.info("Sending message INFO");
+                        session.sendMessage(new TextMessage(AlertMessage.makeAlert("INFO")));
+                        // заполнить таблицу controllers для возможности линковки
                     } else {
                         session.sendMessage(new TextMessage(AlertMessage.makeAlert("READY")));
                         setUserForWSSession(session, сontrollerService.getUserByController(tokenData.getMac()));
-                        if ("relaycontroller".equals(hello.getType())) {
-                            relayControllerService.setRelayControllerStatus(tokenData.getMac(), "online");
-                        }
                     }
                 }
                 break;
@@ -161,10 +165,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 logger.info(wsTextMessage.getPayload().toString());
                 //Info info = (Info)wsTextMessage.getPayload();
                 Info info = objectMapper.readValue(json, Info.class);
-                if ("relaycontroller".equals(wsSession.getType())) {
-                    relayControllerService.setRelayControllerInfo(info);
-                }
-
+                сontrollerService.setControllerInfo(info);
+//                if ("relaycontroller".equals(wsSession.getType())) {
+//                    relayControllerService.setRelayControllerInfo(info);
+//                }
                 //setControllerIdForSession(session, info.getMac());
                 break;
             case "DEVICECONFIG":
@@ -182,7 +186,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     }
                     RelayController relayController = objectMapper.readValue(json, RelayController.class);
                     relayController.setMac(wsSession.getControllerId());
-                    relayController.setStatus("online");
+                    //relayController.setStatus("online");
                     relayControllerService.addRelayController(relayController, user);
                 }
                 break;
@@ -237,15 +241,19 @@ public class WebSocketHandler extends TextWebSocketHandler {
         // find current conrtoller and set offline
         String mac = getControllerIdForWSSession(session);
         if (mac != null)
-            setControllerOffline(mac);
+            сontrollerService.setControllerStatus(mac, "offline");
         String type = "";
+        WSSession sessionToDel = null;
         for (WSSession wsSession : wsSessions) {
             if (wsSession.getSession().equals(session)) {
                 type = wsSession.getType();
-                wsSessions.remove(wsSession);
+                sessionToDel = wsSession;
+                //wsSessions.remove(wsSession);
                 break;
             }
         }
+        if (sessionToDel != null)
+            wsSessions.remove(sessionToDel);
 
         //wsSessions.remove(new WSSession(session));
         logger.info(String.format("Client %s disconnected with ID %s", type, session.getId()));
@@ -374,16 +382,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     public void requestControllerConfig(String mac) {
         SendMessageToController(mac, getJsonRequestConfig());
-    }
-
-    void setControllerOffline(String mac) {
-        Controller c = сontrollerService.findController(mac);
-        if (c != null) {
-            if ("relaycontroller".equals(c.getType())) {
-                relayControllerService.setRelayControllerStatus(mac, "offline");
-            }
-            // TODO : add other controllers types
-        }
     }
 
     public String sendDeviceAction(String mac, Integer output, String action, Integer slaveId) {

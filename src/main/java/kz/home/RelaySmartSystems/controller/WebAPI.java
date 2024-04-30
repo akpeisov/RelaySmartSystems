@@ -102,6 +102,9 @@ public class WebAPI {
         }
 
         Controller controller = controllerService.findController(mac);
+        if (controller == null) {
+            return ResponseEntity.status(404).body("Device not found");
+        }
         if (controller.getUser() != null) {
             // уже есть какой-то юзер, что делаем?
             // если это этот же юзер или другой???

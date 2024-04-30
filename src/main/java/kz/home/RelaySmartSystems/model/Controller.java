@@ -22,6 +22,15 @@ public class Controller {
     private Date firstDate;
     private String type;
     private Date linkDate;
+    private String name;
+    private String status;
+    private Integer uptime;
+    private Integer freeMemory;
+    private String version;
+    private String ethip;
+    private String wifiip;
+    private String description;
+    private Integer wifirssi;
     @Transient
     private Object controllerData;
 
@@ -84,5 +93,77 @@ public class Controller {
 
     public void setControllerData(Object controllerData) {
         this.controllerData = controllerData;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Integer getUptime() {
+        return uptime;
+    }
+
+    public void setUptime(Integer uptime) {
+        this.uptime = uptime;
+    }
+
+    public Integer getFreeMemory() {
+        return freeMemory;
+    }
+
+    public void setFreeMemory(Integer freeMemory) {
+        this.freeMemory = freeMemory;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getEthip() {
+        return ethip;
+    }
+
+    public void setEthip(String ethip) {
+        this.ethip = ethip;
+    }
+
+    public String getWifiip() {
+        return wifiip;
+    }
+
+    public void setWifiip(String wifiip) {
+        this.wifiip = wifiip;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Integer getWifirssi() {
+        return wifirssi;
+    }
+
+    public void setWifirssi(Integer wifirssi) {
+        this.wifirssi = wifirssi;
     }
 }
