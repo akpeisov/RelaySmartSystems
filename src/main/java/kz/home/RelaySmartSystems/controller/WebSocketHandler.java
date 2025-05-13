@@ -1,13 +1,16 @@
 package kz.home.RelaySmartSystems.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import kz.home.RelaySmartSystems.filters.IpHandshakeInterceptor;
 import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.def.Action;
 import kz.home.RelaySmartSystems.model.def.Hello;
 import kz.home.RelaySmartSystems.model.def.Info;
+import kz.home.RelaySmartSystems.model.def.LinkRequest;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
@@ -22,6 +25,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -30,14 +35,14 @@ import java.util.*;
 public class WebSocketHandler extends TextWebSocketHandler {
     private static final ArrayList<WSSession> wsSessions = new ArrayList<WSSession>();
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHandler.class);
-    private final ControllerService сontrollerService;
+    private final ControllerService controllerService;
     private final RelayControllerService relayControllerService;
     private final JwtAuthorizationFilter jwtAuthorizationFilter;
     private final UserService userService;
 
-    public WebSocketHandler(ControllerService сontrollerService,
+    public WebSocketHandler(ControllerService controllerService,
                             RelayControllerService relayControllerService, JwtAuthorizationFilter jwtAuthorizationFilter, UserService userService) {
-        this.сontrollerService = сontrollerService;
+        this.controllerService = controllerService;
         this.relayControllerService = relayControllerService;
         this.jwtAuthorizationFilter = jwtAuthorizationFilter;
         this.userService = userService;
@@ -61,7 +66,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        // find current wsSession for session
+        // Ищем текущую сессию в списке сессий
         WSSession wsSession = null;
         for (WSSession wsSession1 : wsSessions) {
             if (wsSession1 != null && wsSession1.getSession().equals(session)) {
@@ -71,7 +76,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
         if (wsSession == null) {
             logger.error("wsSession not found!");
-            session.sendMessage(new TextMessage(AlertMessage.makeAlert("WS session not found")));
+            //session.sendMessage(new TextMessage(AlertMessage.makeAlert("WS session not found")));
             session.close();
             return;
         }
@@ -86,167 +91,339 @@ public class WebSocketHandler extends TextWebSocketHandler {
             wsTextMessage = objectMapper.readValue(payload, WSTextMessage.class);
             json = objectMapper.writeValueAsBytes(wsTextMessage.getPayload());
         } catch (Exception e) {
-            session.sendMessage(new TextMessage(AlertMessage.makeAlert("Wrong message type")));
+            session.sendMessage(new TextMessage(errorMessage("Wrong message type")));
             session.close();
             return;
         }
 
         String type = wsTextMessage.getType();
         if (type == null) {
+            session.sendMessage(new TextMessage(errorMessage("Type is null")));
+            session.close();
             return;
         }
 
+        if (!wsSession.isAuthorized() && !type.equals("HELLO") && !type.equals("DEVICECONFIG")) {
+            session.sendMessage(new TextMessage(errorMessage("Good bye!")));
+            session.close();
+            return;
+        }
+
+
+        // TODO : разделить запросы и ответы от контроллеров и фронта (только хэллоу общий)
+
+
         switch (type) {
             case "HELLO":
-                // первый метод для авторизации устройства или фронта. Проверка авторизации.
-                logger.info(wsTextMessage.getPayload().toString());
+                // Первый метод для авторизации устройства или фронта. Проверка авторизации.
+                // У фронта есть Username, у устройства есть Mac
                 Hello hello = objectMapper.readValue(json, Hello.class);
                 String token = hello.getToken();
                 TokenData tokenData = jwtAuthorizationFilter.validateToken(token, hello.getType());
                 if (tokenData.getErrorText() != null) {
-                    session.sendMessage(new TextMessage(ErrorMessage.makeError(String.format("Token error. %s. Closing connection.", tokenData.getErrorText()))));
+                    logger.error(String.format("Token error %s", tokenData.getErrorText()));
+                    session.sendMessage(new TextMessage(errorMessage(String.format("Token error. %s. Closing connection.", tokenData.getErrorText()))));
                     session.close();
-                    return;
+                    break;
                 }
-                if (tokenData.getMac() == null && tokenData.getUsername() == null) {
-                    session.sendMessage(new TextMessage(ErrorMessage.makeError("No identifiers!")));
-                    session.close();
-                    return;
-                }
-                // Это клиент фронта
-                if (tokenData.getUsername() != null) {
-                    setUsernameForWSSession(session, tokenData.getUsername());
-                    User user = userService.findById(tokenData.getUsername()).orElse(null);
-                    if (user != null)
-                        setUserForWSSession(session, user);
-                    else {
-                        logger.info(String.format("User by username not found %s", tokenData.getUsername()));
-                        session.close();
-                    }
-                }
-                setTypeForWSSession(session, hello.getType());
-                // если новое подключение с тем же маком, то надо поискать старые сессии и удалить старые
-                // если это устройство, то у него есть мак
+                wsSession.setType(hello.getType());
+
                 if (tokenData.getMac() != null) {
-                    setControllerIdForWSSession(session, tokenData.getMac());
-
-                    WSSession sessionToDel = null;
-                    for (WSSession wsSessionOld : wsSessions) {
-                        if (tokenData.getMac().equalsIgnoreCase(wsSessionOld.getControllerId()) && !wsSessionOld.getSession().getId().equals(session.getId())) {
-                            logger.info(String.format("Removed mac %s from other session %s", tokenData.getMac(), wsSessionOld.getSession().getId()));
-                            //wsSessions.remove(wsSessionOld); // java.util.ConcurrentModificationException: null Нельзя удалять из коллекции при итерировании
-                            sessionToDel = wsSessionOld;
-                            wsSessionOld.getSession().close();
-                            break;
-                        }
-                    }
-                    if (sessionToDel != null)
-                        wsSessions.remove(sessionToDel);
-
-                    сontrollerService.setControllerStatus(tokenData.getMac(), "online");
-                    logger.info(String.format("isControllerLinked %s %s", tokenData.getMac(), isControllerLinked(tokenData.getMac()))); ;
-                    if (!isControllerLinked(tokenData.getMac())) {
-                        сontrollerService.addController(tokenData.getMac().toUpperCase(), hello.getType());
-                        logger.info("Sending message INFO");
-                        session.sendMessage(new TextMessage(AlertMessage.makeAlert("INFO")));
-                        // заполнить таблицу controllers для возможности линковки
+                    // Это контроллер
+                    String mac = tokenData.getMac();
+                    wsSession.setControllerId(mac);
+                    // если контроллера нет, то запросить его конфиг
+                    if (controllerService.findController(mac) == null) {
+                        logger.info("Controller {} not found. Request config", mac);
+                        session.sendMessage(new TextMessage(getCmdMessage("GETDEVICECONFIG")));
+                        break;
                     } else {
-                        //public void updateRelayController(RelayController relayController) {
-                        session.sendMessage(new TextMessage(AlertMessage.makeAlert("READY")));
-                        setUserForWSSession(session, сontrollerService.getUserByController(tokenData.getMac()));
-                    }
-                }
-                break;
-            case "INFO":
-                logger.info(wsTextMessage.getPayload().toString());
-                //Info info = (Info)wsTextMessage.getPayload();
-                Info info = objectMapper.readValue(json, Info.class);
-                сontrollerService.setControllerInfo(info);
-//                if ("relaycontroller".equals(wsSession.getType())) {
-//                    relayControllerService.setRelayControllerInfo(info);
-//                }
-                //setControllerIdForSession(session, info.getMac());
-                break;
-            case "DEVICECONFIG":
-                //logger.info(wsTextMessage.getPayload().toString());
-                if ("relaycontroller".equals(wsSession.getType())) {
-                    User user = wsSession.getUser();
-                    if (user == null) {
-                        // может быть так что это сессия нового устройства, которое только прилинковали.
-                        // В этом случае попробуем найти пользователя
-                        user = сontrollerService.getUserByController(wsSession.getControllerId());
-                        if (user == null) {
-                            logger.error("DEVICECONFIG. No user found");
-                            return;
+                        if (controllerService.isControllerLinked(mac)) {
+                            wsSession.setUser(controllerService.findControllerOwner(mac));
                         }
                     }
+                } else if (tokenData.getUsername() != null) {
+                    // Это клиент фронта
+                    //setUsernameForWSSession(session, tokenData.getUsername());
+                    wsSession.setUsername(tokenData.getUsername());
+                    User user = userService.findById(tokenData.getUsername()).orElse(null);
+                    if (user != null) {
+                        wsSession.setUser(user);
+                        //setUserForWSSession(session, user);
+                    } else {
+                        logger.info(String.format("User by username not found %s", tokenData.getUsername()));
+                        session.sendMessage(new TextMessage(errorMessage("User not found!")));
+                        session.close();
+                        break;
+                    }
+                } else {
+                    session.sendMessage(new TextMessage(errorMessage("No identifiers!")));
+                    session.close();
+                    break;
+                }
+                //setTypeForWSSession(session, hello.getType());
+                wsSession.setAuthorized(true);
+                session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
+                break;
+
+//            case "CHECK":
+//                // проверить наличие контроллера
+//                if (controllerService.findController(wsSession.getControllerId()) == null) {
+//                    logger.info(String.format("controller %s not found. Trying to add it",
+//                            wsSession.getControllerId()));
+//                    if ("relaycontroller".equalsIgnoreCase(wsSession.getType())) {
+//
+//                    }
+//                    //controllerService.addController(wsSession.getControllerId().toUpperCase(), wsSession.getType());
+//                    // запросить конфиг устройства
+//                    session.sendMessage(new TextMessage(getCmdMessage("GETDEVICECONFIG")));
+//                } else {
+//                    // существует
+//                    session.sendMessage(new TextMessage(getCmdMessage("READY")));
+//                }
+//                if (controllerService.isControllerLinked(wsSession.getControllerId())) {
+//                    wsSession.setUser(controllerService.findControllerOwner(wsSession.getControllerId()));
+//                }
+//                controllerService.setControllerOnline(wsSession.getControllerId());
+//                break;
+
+            case "DEVICECONFIG":
+                // получение конфига от контроллера
+                // вызывается если это новый контроллер
+                if ("relayController".equalsIgnoreCase(wsSession.getType())) {
+                    //User user = controllerService.getUserByController(wsSession.getControllerId());
                     RelayController relayController = objectMapper.readValue(json, RelayController.class);
                     relayController.setMac(wsSession.getControllerId());
-                    //relayController.setStatus("online");
-                    relayControllerService.addRelayController(relayController, user);
+                    relayControllerService.addRelayController(relayController, null);
+                    wsSession.setAuthorized(true);
+                    session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
+                } else {
+                    session.sendMessage(new TextMessage(errorMessage("Unknown type")));
                 }
                 break;
+
+            case "INFO":
+                // получение информации о контроллере (аптайм, и т.д.)
+                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                    Info info = objectMapper.readValue(json, Info.class);
+                    controllerService.setControllerInfo(info);
+                }
+                break;
+
             case "IOSTATES":
-                // обновление состояния входов/выходов сразу всех. Используется при подключении контроллера
-                if ("relaycontroller".equals(wsSession.getType())) {
+                // Обновление состояния входов/выходов сразу всех. Используется при подключении контроллера
+                if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     RelayController relayController = objectMapper.readValue(json, RelayController.class);
                     relayController.setMac(wsSession.getControllerId());
-                    relayControllerService.updateRelayController(relayController);
+                    relayControllerService.updateRelayControllerIOStates(relayController);
                 }
                 break;
+
             case "UPDATE":
                 // обновление состояния входов/выходов в базе и отправка на фронт
-                if ("relaycontroller".equals(wsSession.getType())) {
+//            {"type":"UPDATE","payload":{"mac":"C8F09E311008","input":16,"state":"long"}}
+                // проверить линковку
+                if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     RCUpdate update = objectMapper.readValue(json, RCUpdate.class);
-                    //RCEvent event = objectMapper.readValue(json, RCEvent.class);
                     if (update.getOutput() != null) {
-                        relayControllerService.setOutputState(wsSession.getControllerId(), update.getOutput(), update.getState());
+                        relayControllerService.setOutputState(wsSession.getControllerId(), update.getOutput(), update.getState(), update.getSlaveId());
                     } else if (update.getInput() != null) {
-                        relayControllerService.setInputState(wsSession.getControllerId(), update.getInput(), update.getState());
+                        if ((update.getInput() == 16) && ("long".equalsIgnoreCase(update.getState()))) {
+                            // event for link
+                            // проверить есть ли запрос на линковку в веб сессии
+                            WSSession linkSession = findSessionForLinkRequest(update.getMac());
+                            //User user = isLinkRequestActive(update.getMac());
+                            if (linkSession != null) {
+                                logger.info("Link request ok");
+                                if (controllerService.linkController(update.getMac(), linkSession.getUser()).equalsIgnoreCase("OK")) {
+                                    linkSession.getSession().sendMessage(new TextMessage(WSTextMessage.send("LINKOK", null)));
+                                }
+                            }
+                        } else {
+                            relayControllerService.setInputState(wsSession.getControllerId(), update.getInput(), update.getState());
+                        }
                     }
-                    // найти пользователя, у которого есть этот контроллер, затем найти все его сессии и отправить туда
-                    User user = relayControllerService.getUser(wsSession.getControllerId());
-                    if (user != null) {
+                    // отправить уведомление владельцу контроллера
+                    if (wsSession.getUser() != null) {
                         //logger.info(String.format("User found %s", user.getFio()));
-                        SendMessageToWebUser(user, wsTextMessage.makeMessage());
+                        sendMessageToWebUser(wsSession.getUser(), wsTextMessage.makeMessage());
                     } else {
-                        logger.error("User not found");
+                        logger.info("no user found");
                     }
                 }
                 break;
+
+            case "SETDEVICECONFIG":
+                // результат обновления конфига от контроллера
+                if ("relayController".equalsIgnoreCase(wsSession.getType())) {
+                    Message message1 = objectMapper.readValue(json, Message.class);
+                    if (message1.getMessage() != null) {
+                        logger.info(String.format("SETDEVICECONFIG msg %s", message1.getMessage()));
+                        //session.sendMessage(new TextMessage());
+                        if ("OK".equalsIgnoreCase(message1.getMessage())) {
+                            sendMessageToWebUser(wsSession.getUser(), successMessage("Upload successful"));
+                        } else {
+                            sendMessageToWebUser(wsSession.getUser(), errorMessage("Upload to controller failed"));
+                        }
+                    }
+                }
+                break;
+
             case "ACTION":
                 // отправка действия на контроллер
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Action action = objectMapper.readValue(json, Action.class);
+                    // TODO : security check for controller's owner is correct
                     logger.info(String.format("Sending message %s to controller %s", action.getAction(), action.getMac()));
                     // это действие, надо найти нужную сессию и отправить туда
-                    SendMessageToController(action.getMac(), wsTextMessage.makeMessage());
+                    sendMessageToController(action.getMac(), wsTextMessage.makeMessage());
                 }
                 break;
+
             case "UPDATEOUTPUT":
                 // обновление выхода контроллера
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     RCUpdateOutput rcUpdateOutput = objectMapper.readValue(json, RCUpdateOutput.class);
-                    SendMessageToController(rcUpdateOutput.getMac(), wsTextMessage.makeMessage());
+                    String res = sendMessageToController(rcUpdateOutput.getMac(), wsTextMessage.makeMessage());
+                    if (!"OK".equalsIgnoreCase(res)) {
+                        session.sendMessage(new TextMessage(errorMessage(res)));
+                    }
                     // пока только для relaycontroller
                     relayControllerService.updateOutput(rcUpdateOutput);
                 }
                 break;
+
             case "UPDATEINPUT":
                 // обновление входа контроллера
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCUpdateInput rcUpdateInput = objectMapper.readValue(json, RCUpdateInput.class);
-                    SendMessageToController(rcUpdateInput.getMac(), wsTextMessage.makeMessage());
                     // пока только для relaycontroller
-                    relayControllerService.updateInput(rcUpdateInput);
+                    RCUpdateInput rcUpdateInput = objectMapper.readValue(json, RCUpdateInput.class);
+                    if (rcUpdateInput.getUuid() != null) {
+                        String res = relayControllerService.updateInput(rcUpdateInput);
+                        if ("OK".equalsIgnoreCase(res)) {
+                            //logger.info(correctJSON(wsTextMessage.makeMessage()));
+                            //SendMessageToController(rcUpdateInput.getMac(), wsTextMessage.makeMessage());
+                            session.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                        } else {
+                            session.sendMessage(new TextMessage(errorMessage(res)));
+                        }
+                    } else {
+                        session.sendMessage(new TextMessage(errorMessage("Can't parse request")));
+                    }
+
                 }
                 break;
+
+            case "REQUESTFORLINK":
+                // запрос на линк контроллера
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    LinkRequest linkRequest = objectMapper.readValue(json, LinkRequest.class);
+                    if (linkRequest.getMac() != null) {
+                        Controller controller = controllerService.findController(linkRequest.getMac());
+                        if (controller != null) {
+                            // проверить готов ли контроллер к линку
+                            if (controller.isLinked()) {
+                                session.sendMessage(new TextMessage(errorMessage("Controller already linked")));
+                            } else {
+                                //session.sendMessage(new TextMessage(AlertMessage.makeAlert(controller.getType())));
+                                // проверить онлайн ли сейчас контроллер
+                                if (!isControllerOnline(linkRequest.getMac())) {
+                                    session.sendMessage(new TextMessage(errorMessage("Controller is offline. Make sure that is powered on and connect to internet.")));
+                                } else {
+                                    Map<String, Object> payld = new HashMap<>();
+                                    //payld.put("message", 123);
+                                    payld.put("controllertype", controller.getType());
+                                    session.sendMessage(new TextMessage(WSTextMessage.send("LINK", payld)));
+                                    // find controller and wait link event from it
+                                    // make temporary flag
+                                    wsSession.setControllerId(linkRequest.getMac());
+                                    wsSession.setObj("linkRequested"); // set curtime
+                                }
+                            }
+                        } else {
+                            session.sendMessage(new TextMessage(errorMessage("Controller not found")));
+                        }
+                    } else if ("linkRequestTimeout".equalsIgnoreCase(linkRequest.getEvent())) {
+                        wsSession.setObj(null);
+                    } else {
+                        session.sendMessage(new TextMessage(errorMessage("Controller not found")));
+                    }
+                }
+                break;
+
+            case "UPLOADCONFIG":
+                // команда отправки конфига на контроллер
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    Controller controller = objectMapper.readValue(json, Controller.class);
+                    if ("test".equalsIgnoreCase(controller.getMac())) {
+                        //session.sendMessage(new TextMessage("OK"));
+                        //session.sendMessage(new TextMessage(errorMessage("Test")));
+                        session.sendMessage(new TextMessage(successMessage("Test")));
+                    }
+                    else if (controller.getMac() != null) {
+                        if (isControllerOnline(controller.getMac())) {
+                            // make config and send to controller
+                            String res = sendMessageToController(controller.getMac(), relayControllerService.makeDeviceConfig(controller.getMac()));
+                            //logger.info("len " +relayControllerService.makeDeviceConfig(controller.getMac()).getBytes().length);
+                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\"}");
+                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\", \"payload\": \"" +genTest(5500)+ "\"}");
+
+                            logger.info(String.format("sendMessageToController %s", res));
+                            if (!"OK".equalsIgnoreCase(res)) {
+                                session.sendMessage(new TextMessage(errorMessage(res)));
+                            }
+                        } else {
+                            session.sendMessage(new TextMessage(errorMessage("Controller offline")));
+                        }
+                    }
+                }
+                break;
+
+            case "TEST":
+                // команда отправки конфига на контроллер
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    Controller controller = objectMapper.readValue(json, Controller.class);
+
+                }
+                break;
+
             default:
                 logger.warn(String.format("Unknown message %s", type));
                 logger.info(wsTextMessage.getPayload().toString());
-                session.sendMessage(new TextMessage(AlertMessage.makeAlert("I receive your message, but nothing to say...")));
+                session.sendMessage(new TextMessage(errorMessage("I receive your message, but nothing to say...")));
                 break;
         }
+    }
+
+    private String genTest(int len) {
+        String SYMBOLS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom RANDOM = new SecureRandom();
+        StringBuilder result = new StringBuilder();
+
+        while (result.length() < len) {
+            // Добавить случайный символ
+            char c = SYMBOLS.charAt(RANDOM.nextInt(SYMBOLS.length()));
+            result.append(c);
+
+        }
+        //return "{\"test\": \"" + result.substring(0, len) + "\"}";
+        return result.substring(0, len);
+    }
+
+    private String errorMessage(String message) {
+        Map<String, Object> payld = new HashMap<>();
+        payld.put("message", message);
+        return WSTextMessage.send("ERROR", payld);
+    }
+
+    private String successMessage(String message) {
+        Map<String, Object> payld = new HashMap<>();
+        payld.put("message", message);
+        return WSTextMessage.send("SUCCESS", payld);
+    }
+
+    private String getCmdMessage(String cmd) {
+        return WSTextMessage.send(cmd, null);
     }
 
     @Override
@@ -256,7 +433,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
         wsSession.setClientIP(clientIpAddress == null ? session.getRemoteAddress().toString() : clientIpAddress);
         wsSessions.add(wsSession);
-        logger.info(String.format("New client connected with ID %s %s %s", session.getId(), session.getRemoteAddress(), clientIpAddress));
+        logger.info(String.format("New client connected with ID %s remote IP %s client IP %s", session.getId(), session.getRemoteAddress(), clientIpAddress));
         super.afterConnectionEstablished(session);
     }
 
@@ -265,7 +442,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         // find current conrtoller and set offline
         String mac = getControllerIdForWSSession(session);
         if (mac != null)
-            сontrollerService.setControllerStatus(mac, "offline");
+            controllerService.setControllerOffline(mac);
         String type = "";
         WSSession sessionToDel = null;
         for (WSSession wsSession : wsSessions) {
@@ -289,19 +466,20 @@ public class WebSocketHandler extends TextWebSocketHandler {
         logger.info(String.format("handleTransportError with ID %s %s", session.getId(), exception.getMessage()));
     }
 
-    public String SendMessageToController(String controllerId, String message) {
+    public String sendMessageToController(String controllerId, String message) {
         if (controllerId == null)
             return "MAC_NULL";
 
         for (WSSession session: wsSessions) {
-            if (controllerId.toUpperCase().equals(session.getControllerId())) {
+            if (!"web".equalsIgnoreCase(session.getType()) &&
+                    controllerId.toUpperCase().equals(session.getControllerId())) {
                 try {
                     if (session.getSession().isOpen()) {
                         session.getSession().sendMessage(new TextMessage(message));
                         return "OK";
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error(e.getLocalizedMessage());
                     return "ERROR";
                 }
                 break;
@@ -310,10 +488,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
         return "NOT_FOUND";
     }
 
-    public void SendMessageToWebUser(User user, String message) {
+    public void sendMessageToWebUser(User user, String message) {
         // Отправка сообщения во все пользовательские сессии
-        logger.info(String.format("Send msg to %s. %s", user.getId(), message));
-        if (user == null)
+        logger.info(String.format("sendMessageToWebUser User %s. Message %s", user.getId(), message));
+        if (user.getId() == null)
             return;
 
         for (WSSession session: wsSessions) {
@@ -328,6 +506,27 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
             }
         }
+    }
+
+    private WSSession findSessionForLinkRequest(String mac) {
+        // определить есть ли запрос на линковку в текущих сессиях фронта
+        for (WSSession wsSession : wsSessions) {
+            if ("web".equals(wsSession.getType()) &&
+                    wsSession.getControllerId() != null &&
+                    "linkRequested".equalsIgnoreCase((String)wsSession.getObj()))  {
+                return wsSession;
+            }
+        }
+        return null;
+    }
+
+    private boolean isControllerOnline(String mac) {
+        for (WSSession wsSession : wsSessions) {
+            if (wsSession.getControllerId() != null && wsSession.getControllerId().equals(mac)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void setControllerIdForWSSession(WebSocketSession targetSession, String controllerId) {
@@ -362,6 +561,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     private void setUserForWSSession(WebSocketSession targetSession, User user) {
+        // установить владельца для сессии устройства
         for (WSSession wsSession : wsSessions) {
             if (wsSession.getSession().equals(targetSession)) {
                 wsSession.setUser(user);
@@ -398,36 +598,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     boolean isControllerLinked(String mac) {
         // вернет true если контроллер привязан к пользователю
-        return сontrollerService.isControllerLinked(mac);
+        return controllerService.isControllerLinked(mac);
     }
 
-    private String getJsonRequestConfig() {
-        return "{\"type\": \"GETDEVICECONFIG\"}";
-    }
 
-    public void requestControllerConfig(String mac) {
-        SendMessageToController(mac, getJsonRequestConfig());
-    }
-
-    public String sendDeviceAction(String mac, Integer output, String action, Integer slaveId) {
-        Map<String, Object> objectMap = new HashMap<>();
-        objectMap.put("type", "ACTION");
-        objectMap.put("payload", new HashMap<String, Object>() {{
-            put("output", output);
-            put("action", action);
-            if (slaveId > 0)
-                put("slaveid", slaveId);
-        }});
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            String json = objectMapper.writeValueAsString(objectMap);
-            logger.info(json);
-            return SendMessageToController(mac, json);
-        } catch (JsonProcessingException e) {
-            //throw new RuntimeException(e);
-        }
-        return "ERROR";
-    }
 
 //    @Scheduled(fixedRate = 5000)
     private void test() throws IOException {
@@ -447,12 +621,66 @@ public class WebSocketHandler extends TextWebSocketHandler {
     private void alive() throws IOException {
         for (WSSession wsSession : wsSessions) {
             if (wsSession != null && "web".equalsIgnoreCase(wsSession.getType())) {
-                wsSession.getSession().sendMessage(new TextMessage(AlertMessage.makeAlert("alive")));
+                String date = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date());
+                wsSession.getSession().sendMessage(new TextMessage(AlertMessage.makeAlert(String.format("alive %s", date))));
             }
         }
     }
 
+    @Scheduled(fixedRate = 20000)
+    private void serviceTask() {
+        controllerService.setOffline();
+    }
+
     public List<WSSession> getCurrentWSSessions() {
         return wsSessions;
+    }
+
+    private String correctJSON(String json) {
+        // TODO : перенести в отдельный статичный класс
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = null;
+        String cleanedJson = null;
+        try {
+            root = mapper.readTree(json);
+            removeFieldsRecursive(root, "uuid", "outputID", "order", "state");
+            cleanedJson = mapper.writer().writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return cleanedJson;
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        JsonNode jsonNode = null;
+//        String result = null;
+//        try {
+//            jsonNode = objectMapper.readTree(json);
+//            ObjectNode object = (ObjectNode) jsonNode;
+//            object.remove("uuid");
+//            result = objectMapper.writeValueAsString(object);
+//        } catch (JsonProcessingException e) {
+//            throw new RuntimeException(e);
+//        }
+//        return result;
+//        Assertions.assertEquals("{\"name\":\"John\",\"city\":\"New York\"}", updatedJson);
+    }
+
+
+    private static void removeFieldsRecursive(JsonNode node, String... fieldsToRemove) {
+        // TODO : перенести в отдельный статичный класс
+        if (node.isObject()) {
+            ObjectNode objNode = (ObjectNode) node;
+            for (String field : fieldsToRemove) {
+                objNode.remove(field);
+            }
+            Iterator<Map.Entry<String, JsonNode>> iter = objNode.fields();
+            while (iter.hasNext()) {
+                Map.Entry<String, JsonNode> entry = iter.next();
+                removeFieldsRecursive(entry.getValue(), fieldsToRemove);
+            }
+        } else if (node.isArray()) {
+            for (JsonNode item : node) {
+                removeFieldsRecursive(item, fieldsToRemove);
+            }
+        }
     }
 }

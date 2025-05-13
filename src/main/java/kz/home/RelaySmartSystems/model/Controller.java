@@ -1,16 +1,23 @@
 package kz.home.RelaySmartSystems.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.validator.constraints.UniqueElements;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.util.Date;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "controllers")
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
+@EntityListeners(AuditingEntityListener.class)
+@Inheritance(strategy = InheritanceType.JOINED)
 public class Controller {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -31,139 +38,21 @@ public class Controller {
     private String wifiip;
     private String description;
     private Integer wifirssi;
+    private long configTime;
+    @LastModifiedDate
+    private Date lastSeen;
+//    @Transient
+//    private Object controllerData;
+
     @Transient
-    private Object controllerData;
-
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
-    }
-
-    public String getMac() {
-        return mac;
-    }
-
-    public void setMac(String mac) {
-        this.mac = mac;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public Date getFirstDate() {
-        return firstDate;
-    }
-
-    public void setFirstDate(Date firstDate) {
-        this.firstDate = firstDate;
-    }
+    private boolean linked;
 
     @PrePersist
     void firstDate() {
         this.firstDate = new Date();
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public Date getLinkDate() {
-        return linkDate;
-    }
-
-    public void setLinkDate(Date linkDate) {
-        this.linkDate = linkDate;
-    }
-
-    public Object getControllerData() {
-        return controllerData;
-    }
-
-    public void setControllerData(Object controllerData) {
-        this.controllerData = controllerData;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public Integer getUptime() {
-        return uptime;
-    }
-
-    public void setUptime(Integer uptime) {
-        this.uptime = uptime;
-    }
-
-    public Integer getFreeMemory() {
-        return freeMemory;
-    }
-
-    public void setFreeMemory(Integer freeMemory) {
-        this.freeMemory = freeMemory;
-    }
-
-    public String getVersion() {
-        return version;
-    }
-
-    public void setVersion(String version) {
-        this.version = version;
-    }
-
-    public String getEthip() {
-        return ethip;
-    }
-
-    public void setEthip(String ethip) {
-        this.ethip = ethip;
-    }
-
-    public String getWifiip() {
-        return wifiip;
-    }
-
-    public void setWifiip(String wifiip) {
-        this.wifiip = wifiip;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Integer getWifirssi() {
-        return wifirssi;
-    }
-
-    public void setWifirssi(Integer wifirssi) {
-        this.wifirssi = wifirssi;
+    public boolean isLinked() {
+        return user != null;
     }
 }

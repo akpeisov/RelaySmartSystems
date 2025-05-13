@@ -18,7 +18,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
 
     @Autowired
-    ControllerService сontrollerService;
+    ControllerService controllerService;
     @Autowired
     RelayControllerService relayControllerService;
     @Autowired
@@ -29,7 +29,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     UserService userService;
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new WebSocketHandler(сontrollerService, relayControllerService, jwtAuthorizationFilter, userService), "/ws").setAllowedOrigins("*");
-    //    registry.addHandler(new WebSocketHandlerUI(jwtAuthorizationFilter, сontrollerService, eventPublisher), "/wsui").setAllowedOrigins("*");
+        registry.addHandler(new WebSocketHandler(controllerService, relayControllerService, jwtAuthorizationFilter, userService), "/ws").setAllowedOrigins("*");
+    //    registry.addHandler(new WebSocketHandlerUI(jwtAuthorizationFilter, controllerService, eventPublisher), "/wsui").setAllowedOrigins("*");
     }
+
+
 }

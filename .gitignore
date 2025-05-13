@@ -1,5 +1,6 @@
 .idea/
 **/target
+src_old/
 
 # Compiled class file
 *.class
