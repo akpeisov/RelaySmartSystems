@@ -207,6 +207,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if (!"web".equalsIgnoreCase(wsSession.getType())) {
                     Info info = objectMapper.readValue(json, Info.class);
                     controllerService.setControllerInfo(info);
+                    // send to web
+                    WSTextMessage wsMsg = new WSTextMessage("INFO", info);
+                    logger.warn(wsMsg.makeMessage());
+                    //sendMessageToWebUser(wsSession.getUser(), wsMsg.makeMessage());
+//                    logger.warn(payload);
+//                    logger.warn(info.getJson());
                 }
                 break;
 
@@ -620,7 +626,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     @Scheduled(fixedRate = 5000)
     private void alive() throws IOException {
         for (WSSession wsSession : wsSessions) {
-            if (wsSession != null && "web".equalsIgnoreCase(wsSession.getType())) {
+            if (wsSession != null && "web".equalsIgnoreCase(wsSession.getType()) && wsSession.getSession().isOpen()) {
                 String date = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date());
                 wsSession.getSession().sendMessage(new TextMessage(AlertMessage.makeAlert(String.format("alive %s", date))));
             }

@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
-import java.sql.Time;
 import java.time.Instant;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -166,7 +165,7 @@ public class RelayControllerService {
                 o.setRelayController(c);
                 o.setSlaveId(slaveId);
                 o.setId(output);
-                o.setDuration(0L);
+                o.setLimit(0L);
                 o.setTimer(0L);
             }
             outputRepository.save(o);
