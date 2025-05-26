@@ -1,5 +1,9 @@
 package kz.home.RelaySmartSystems.model.def;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+
 public class Info {
     private Integer freememory;
     private String uptime;
@@ -100,5 +104,10 @@ public class Info {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getJson() throws JsonProcessingException {
+        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+        return ow.writeValueAsString(this);
     }
 }

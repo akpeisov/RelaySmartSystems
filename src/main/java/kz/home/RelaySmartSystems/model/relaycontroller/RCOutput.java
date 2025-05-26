@@ -16,7 +16,7 @@ public class RCOutput {
     private UUID uuid;
     private Integer id;
     private String name;
-    private Long duration;
+    private Long limit;
     private Long timer;
     private String type;
     @JsonProperty("default")
@@ -66,12 +66,12 @@ public class RCOutput {
         this.name = name;
     }
 
-    public Long getDuration() {
-        return duration;
+    public Long getLimit() {
+        return limit;
     }
 
-    public void setDuration(Long duration) {
-        this.duration = duration;
+    public void setLimit(Long limit) {
+        this.limit = limit;
     }
 
     public Long getTimer() {
