@@ -33,7 +33,7 @@ import java.util.*;
 // класс для контроллеров
 @Component // иначе из конфигурации не привяжется класс
 public class WebSocketHandler extends TextWebSocketHandler {
-    private static final ArrayList<WSSession> wsSessions = new ArrayList<WSSession>();
+    private static final ArrayList<WSSession> wsSessions = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHandler.class);
     private final ControllerService controllerService;
     private final RelayControllerService relayControllerService;
@@ -84,13 +84,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
         String payload = message.getPayload();
         logger.info(payload);
 
-        byte[] json = null;
-        WSTextMessage wsTextMessage = null;
+        byte[] json;
+        WSTextMessage wsTextMessage;
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             wsTextMessage = objectMapper.readValue(payload, WSTextMessage.class);
             json = objectMapper.writeValueAsBytes(wsTextMessage.getPayload());
         } catch (Exception e) {
+            logger.error(e.getLocalizedMessage());
             session.sendMessage(new TextMessage(errorMessage("Wrong message type")));
             session.close();
             return;
@@ -210,9 +211,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     // send to web
                     WSTextMessage wsMsg = new WSTextMessage("INFO", info);
                     logger.warn(wsMsg.makeMessage());
-                    //sendMessageToWebUser(wsSession.getUser(), wsMsg.makeMessage());
-//                    logger.warn(payload);
-//                    logger.warn(info.getJson());
+                    sendMessageToWebUser(wsSession.getUser(), wsMsg.makeMessage());
                 }
                 break;
 
@@ -401,21 +400,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private String genTest(int len) {
-        String SYMBOLS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        SecureRandom RANDOM = new SecureRandom();
-        StringBuilder result = new StringBuilder();
-
-        while (result.length() < len) {
-            // Добавить случайный символ
-            char c = SYMBOLS.charAt(RANDOM.nextInt(SYMBOLS.length()));
-            result.append(c);
-
-        }
-        //return "{\"test\": \"" + result.substring(0, len) + "\"}";
-        return result.substring(0, len);
-    }
-
     private String errorMessage(String message) {
         Map<String, Object> payld = new HashMap<>();
         payld.put("message", message);
@@ -437,7 +421,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         WSSession wsSession = new WSSession(session);
         wsSession.setConnectionDate(LocalDateTime.now());
         String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
-        wsSession.setClientIP(clientIpAddress == null ? session.getRemoteAddress().toString() : clientIpAddress);
+        wsSession.setClientIP(clientIpAddress == null ? Objects.requireNonNull(session.getRemoteAddress()).toString() : clientIpAddress);
         wsSessions.add(wsSession);
         logger.info(String.format("New client connected with ID %s remote IP %s client IP %s", session.getId(), session.getRemoteAddress(), clientIpAddress));
         super.afterConnectionEstablished(session);
@@ -468,7 +452,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+    public void handleTransportError(WebSocketSession session, Throwable exception) {
         logger.info(String.format("handleTransportError with ID %s %s", session.getId(), exception.getMessage()));
     }
 
@@ -519,6 +503,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         for (WSSession wsSession : wsSessions) {
             if ("web".equals(wsSession.getType()) &&
                     wsSession.getControllerId() != null &&
+                    wsSession.getControllerId().equals(mac) &&
                     "linkRequested".equalsIgnoreCase((String)wsSession.getObj()))  {
                 return wsSession;
             }
