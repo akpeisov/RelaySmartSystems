@@ -1,12 +1,16 @@
 package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.UUID;
 
 @Entity
 @Table(name = "rc_outputs")
+@Setter
+@Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 //@JsonPropertyOrder({"id"}) // какое свойство в каком порядке будет внутри объекта, это не сортировка
@@ -40,116 +44,5 @@ public class RCOutput {
 
     public String getOutputID() {
         return String.format("s%do%d", this.slaveId, this.id);
-    }
-
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Long getLimit() {
-        return limit;
-    }
-
-    public void setLimit(Long limit) {
-        this.limit = limit;
-    }
-
-    public Long getTimer() {
-        return timer;
-    }
-
-    public void setTimer(Long timer) {
-        this.timer = timer;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String get_default() {
-        return _default;
-    }
-
-    public void set_default(String _default) {
-        this._default = _default;
-    }
-
-    public RelayController getRelayController() {
-        return relayController;
-    }
-    public void setRelayController(RelayController relayController) {
-        this.relayController = relayController;
-    }
-
-    public String getState() {
-        return state;
-    }
-
-    public void setState(String state) {
-        this.state = state;
-    }
-
-    public Boolean getAlice() {
-        return alice;
-    }
-
-    public void setAlice(Boolean alice) {
-        this.alice = alice;
-    }
-
-    public String getRoom() {
-        return room;
-    }
-
-    public void setRoom(String room) {
-        this.room = room;
-    }
-
-    public Integer getOn() {
-        return on;
-    }
-
-    public void setOn(Integer on) {
-        this.on = on;
-    }
-
-    public Integer getOff() {
-        return off;
-    }
-
-    public void setOff(Integer off) {
-        this.off = off;
-    }
-
-    public Integer getSlaveId() {
-        return slaveId;
-    }
-
-    public void setSlaveId(Integer slaveId) {
-        this.slaveId = slaveId;
     }
 }

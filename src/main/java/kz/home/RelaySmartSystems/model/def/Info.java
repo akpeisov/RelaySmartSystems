@@ -6,16 +6,16 @@ import lombok.Setter;
 @Setter
 @Getter
 public class Info {
-    private Integer freememory;
+    private Integer freeMemory;
     private String uptime;
-    private Integer uptimeraw;
+    private Integer uptimeRaw;
     private String curdate;
-    private String devicename;
+    private String name;
     private String description;
     private String version;
-    private Integer rssi;
-    private String ethip;
-    private String wifiip;
+    private Integer wifiRSSI;
+    private String ethIP;
+    private String wifiIP;
     private String mac;
 
 //    public String getJson() throws JsonProcessingException {

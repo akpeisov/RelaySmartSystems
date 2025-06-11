@@ -77,22 +77,21 @@ public class ControllerService {
         return controllerRepository.findByUser(user);
     }
 
-    public String setControllerInfo(Info info) {
+    public void setControllerInfo(Info info) {
         Controller c = controllerRepository.findByMac(info.getMac().toUpperCase());
         if (c != null) {
-            c.setUptime(info.getUptimeraw());
-            c.setFreeMemory(info.getFreememory());
+            c.setUptime(info.getUptime());
+            c.setUptimeRaw(info.getUptimeRaw());
+            c.setFreeMemory(info.getFreeMemory());
             c.setVersion(info.getVersion());
-            c.setEthip(info.getEthip());
-            c.setWifiip(info.getWifiip());
-            c.setName(info.getDevicename());
+            c.setEthIP(info.getEthIP());
+            c.setWifiIP(info.getWifiIP());
+            c.setName(info.getName());
             c.setDescription(info.getDescription());
-            c.setWifirssi(info.getRssi());
+            c.setWifiRSSI(info.getWifiRSSI());
             c.setStatus("online");
             controllerRepository.save(c);
-            return "OK";
         }
-        return "NOT_FOUND";
     }
 
     private void setControllerStatus(String mac, String status) {

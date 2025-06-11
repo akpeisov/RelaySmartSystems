@@ -7,10 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import kz.home.RelaySmartSystems.filters.IpHandshakeInterceptor;
 import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
-import kz.home.RelaySmartSystems.model.def.Action;
-import kz.home.RelaySmartSystems.model.def.Hello;
-import kz.home.RelaySmartSystems.model.def.Info;
-import kz.home.RelaySmartSystems.model.def.LinkRequest;
+import kz.home.RelaySmartSystems.model.def.*;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
@@ -210,7 +207,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     controllerService.setControllerInfo(info);
                     // send to web
                     WSTextMessage wsMsg = new WSTextMessage("INFO", info);
-                    logger.warn(wsMsg.makeMessage());
+                    //logger.warn(wsMsg.makeMessage());
                     sendMessageToWebUser(wsSession.getUser(), wsMsg.makeMessage());
                 }
                 break;
@@ -392,6 +389,32 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
+            case "COMMAND":
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    Command command = objectMapper.readValue(json, Command.class);
+                    logger.info(command.getMac(), command.getCommand());
+                    if ("enableSendLogs".equalsIgnoreCase(command.getCommand())) {
+                        Map<String, Object> payld = new HashMap<>();
+                        payld.put("send", true);
+                        sendMessageToController(command.getMac(), WSTextMessage.send("SENDLOGS", payld));
+                    } else if ("disableSendLogs".equalsIgnoreCase(command.getCommand())) {
+                        Map<String, Object> payld = new HashMap<>();
+                        payld.put("send", false);
+                        sendMessageToController(command.getMac(), WSTextMessage.send("SENDLOGS", payld));
+                    } else if ("startOTA".equalsIgnoreCase(command.getCommand())) {
+                        Map<String, Object> payld = new HashMap<>();
+                        payld.put("url", "https://akpeisov.kz/RelayController/relay32.bin");
+                        sendMessageToController(command.getMac(), WSTextMessage.send("OTA", payld));
+                    }
+                }
+                break;
+
+            case "LOG":
+                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                    sendMessageToWebUser(wsSession.getUser(), wsTextMessage.makeMessage());
+                }
+                break;
+
             default:
                 logger.warn(String.format("Unknown message %s", type));
                 logger.info(wsTextMessage.getPayload().toString());
@@ -480,9 +503,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     public void sendMessageToWebUser(User user, String message) {
         // Отправка сообщения во все пользовательские сессии
-        logger.info(String.format("sendMessageToWebUser User %s. Message %s", user.getId(), message));
-        if (user.getId() == null)
+        if (user == null) {
+            logger.error("User is null");
             return;
+        }
+
+        logger.info(String.format("sendMessageToWebUser User %s. Message %s", user.getId(), message));
 
         for (WSSession session: wsSessions) {
             if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {

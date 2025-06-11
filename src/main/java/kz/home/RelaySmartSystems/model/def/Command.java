@@ -3,9 +3,9 @@ package kz.home.RelaySmartSystems.model.def;
 import lombok.Getter;
 import lombok.Setter;
 
-@Setter
 @Getter
-public class LinkRequest {
+@Setter
+public class Command {
     private String mac;
-    private String event;
+    private String command;
 }

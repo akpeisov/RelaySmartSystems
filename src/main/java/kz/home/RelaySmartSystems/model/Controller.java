@@ -30,14 +30,15 @@ public class Controller {
     private String type;
     private Date linkDate;
     private String name;
+    private String description;
     private String status;
-    private Integer uptime;
+    private Integer uptimeRaw;
+    private String uptime;
     private Integer freeMemory;
     private String version;
-    private String ethip;
-    private String wifiip;
-    private String description;
-    private Integer wifirssi;
+    private String ethIP;
+    private String wifiIP;
+    private Integer wifiRSSI;
     private long configTime;
     @LastModifiedDate
     private Date lastSeen;

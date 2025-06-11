@@ -2,7 +2,9 @@ package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.persistence.*;
 import javax.transaction.Transactional;
@@ -10,6 +12,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+@Setter
+@Getter
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_events")
@@ -32,44 +36,4 @@ public class RCEvent {
     @JoinColumn(name = "input_uuid", nullable=false)
     @ManyToOne(optional = false)
     private RCInput input;
-
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
-    }
-
-    public RCInput getInput() {
-        return input;
-    }
-
-    public void setInput(RCInput input) {
-        this.input = input;
-    }
-
-    public String getEvent() {
-        return event;
-    }
-
-    public void setEvent(String event) {
-        this.event = event;
-    }
-
-    public Set<RCAction> getActions() {
-        return actions;
-    }
-
-    public void setActions(Set<RCAction> actions) {
-        this.actions = actions;
-    }
-
-    public Set<RCAcl> getAcls() {
-        return acls;
-    }
-
-    public void setAcls(Set<RCAcl> acls) {
-        this.acls = acls;
-    }
 }

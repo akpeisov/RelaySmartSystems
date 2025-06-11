@@ -3,10 +3,14 @@ package kz.home.RelaySmartSystems.model.relaycontroller;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Setter
+@Getter
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class RCUpdate {
     private String mac;
@@ -31,51 +35,4 @@ public class RCUpdate {
 
     }
 
-    public String getMac() {
-        return mac;
-    }
-
-    public void setMac(String mac) {
-        this.mac = mac;
-    }
-
-    public String getState() {
-        return state;
-    }
-
-    public void setState(String state) {
-        this.state = state;
-    }
-
-    public Integer getOutput() {
-        return output;
-    }
-
-    public void setOutput(Integer output) {
-        this.output = output;
-    }
-
-    public Integer getInput() {
-        return input;
-    }
-
-    public void setInput(Integer input) {
-        this.input = input;
-    }
-
-    public Integer getSlaveId() {
-        return slaveId;
-    }
-
-    public void setSlaveId(Integer slaveId) {
-        this.slaveId = slaveId;
-    }
-
-    public Integer getTimer() {
-        return timer;
-    }
-
-    public void setTimer(Integer timer) {
-        this.timer = timer;
-    }
 }

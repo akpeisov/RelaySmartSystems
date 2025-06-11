@@ -2,7 +2,9 @@ package kz.home.RelaySmartSystems.model.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
@@ -10,6 +12,8 @@ import java.util.UUID;
 
 @Entity
 @NoArgsConstructor
+@Setter
+@Getter
 @Table(name = "rc_actions")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RCAction {
@@ -32,62 +36,6 @@ public class RCAction {
 
     public String getOutputID() {
         return String.format("s%do%d", this.slaveId, this.output);
-    }
-
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
-    }
-
-    public Integer getOrder() {
-        return order;
-    }
-
-    public void setOrder(Integer order) {
-        this.order = order;
-    }
-
-    public RCEvent getEvent() {
-        return event;
-    }
-
-    public void setEvent(RCEvent event) {
-        this.event = event;
-    }
-
-    public Integer getOutput() {
-        return output;
-    }
-
-    public void setOutput(Integer output) {
-        this.output = output;
-    }
-
-    public String getAction() {
-        return action;
-    }
-
-    public void setAction(String action) {
-        this.action = action;
-    }
-
-    public Integer getDuration() {
-        return duration;
-    }
-
-    public void setDuration(Integer duration) {
-        this.duration = duration;
-    }
-
-    public Integer getSlaveId() {
-        return slaveId;
-    }
-
-    public void setSlaveId(Integer slaveId) {
-        this.slaveId = slaveId;
     }
 
 //    public String getCompareId() {
