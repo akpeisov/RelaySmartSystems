@@ -286,12 +286,16 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // обновление выхода контроллера
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     RCUpdateOutput rcUpdateOutput = objectMapper.readValue(json, RCUpdateOutput.class);
-                    String res = sendMessageToController(rcUpdateOutput.getMac(), wsTextMessage.makeMessage());
-                    if (!"OK".equalsIgnoreCase(res)) {
-                        session.sendMessage(new TextMessage(errorMessage(res)));
+                    // обновление только в БД, конфиг потом руками на контроллер, пока только для relaycontroller
+                    if (rcUpdateOutput.getUuid() != null) {
+                        String res = relayControllerService.updateOutput(rcUpdateOutput);
+                        if ("OK".equalsIgnoreCase(res))
+                            session.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                        else
+                            session.sendMessage(new TextMessage(errorMessage(res)));
+                    } else {
+                        session.sendMessage(new TextMessage(errorMessage("No uuid present")));
                     }
-                    // пока только для relaycontroller
-                    relayControllerService.updateOutput(rcUpdateOutput);
                 }
                 break;
 
@@ -302,17 +306,13 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     RCUpdateInput rcUpdateInput = objectMapper.readValue(json, RCUpdateInput.class);
                     if (rcUpdateInput.getUuid() != null) {
                         String res = relayControllerService.updateInput(rcUpdateInput);
-                        if ("OK".equalsIgnoreCase(res)) {
-                            //logger.info(correctJSON(wsTextMessage.makeMessage()));
-                            //SendMessageToController(rcUpdateInput.getMac(), wsTextMessage.makeMessage());
+                        if ("OK".equalsIgnoreCase(res))
                             session.sendMessage(new TextMessage(successMessage("Saved successfully")));
-                        } else {
+                        else
                             session.sendMessage(new TextMessage(errorMessage(res)));
-                        }
                     } else {
-                        session.sendMessage(new TextMessage(errorMessage("Can't parse request")));
+                        session.sendMessage(new TextMessage(errorMessage("No uuid present")));
                     }
-
                 }
                 break;
 

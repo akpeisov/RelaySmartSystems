@@ -213,7 +213,25 @@ public class RelayControllerService {
         return null;
     }
 
-    public void updateOutput(RCUpdateOutput rcUpdateOutput) {
+    public String updateOutput(RCUpdateOutput rcUpdateOutput) {
+        Optional<RCOutput> rcOutputOpt = outputRepository.findById(rcUpdateOutput.getUuid());
+
+        if (rcOutputOpt.isPresent()) {
+            RCOutput rcOutput = rcOutputOpt.get();
+            rcOutput.setName(rcUpdateOutput.getName());
+            rcOutput.setAlice(rcUpdateOutput.getAlice());
+            rcOutput.setRoom(rcUpdateOutput.getRoom());
+            rcOutput.setTimer(rcUpdateOutput.getTimer());
+            rcOutput.setOff(rcUpdateOutput.getOff());
+            rcOutput.setOn(rcUpdateOutput.getOn());
+            rcOutput.setType(rcUpdateOutput.getType());
+            rcOutput.setLimit(rcUpdateOutput.getLimit());
+            rcOutput.set_default(rcUpdateOutput.get_default());
+            return "OK";
+        } else {
+            return "Output not found";
+        }
+        /*
         RelayController controller = relayControllerRepository.findByMac(rcUpdateOutput.getMac());
         if (controller != null) {
             RCOutput rcOutput = outputRepository.findOutput(controller.getUuid(), rcUpdateOutput.getId(), rcUpdateOutput.getSlaveId());
@@ -232,7 +250,7 @@ public class RelayControllerService {
             if (rcUpdateOutput.get_default() != null)
                 rcOutput.set_default(rcUpdateOutput.get_default());
             outputRepository.save(rcOutput);
-        }
+        }*/
     }
 
     public String updateInput(RCUpdateInput rcUpdateInput) {

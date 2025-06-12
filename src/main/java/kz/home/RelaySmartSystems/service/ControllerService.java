@@ -4,6 +4,8 @@ import kz.home.RelaySmartSystems.model.Controller;
 import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.repository.ControllerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -12,7 +14,7 @@ import java.util.List;
 @Service
 public class ControllerService {
     private final ControllerRepository controllerRepository;
-
+    private static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
     public ControllerService(ControllerRepository controllerRepository) {
         this.controllerRepository = controllerRepository;
     }
@@ -80,17 +82,22 @@ public class ControllerService {
     public void setControllerInfo(Info info) {
         Controller c = controllerRepository.findByMac(info.getMac().toUpperCase());
         if (c != null) {
-            c.setUptime(info.getUptime());
-            c.setUptimeRaw(info.getUptimeRaw());
-            c.setFreeMemory(info.getFreeMemory());
-            c.setVersion(info.getVersion());
-            c.setEthIP(info.getEthIP());
-            c.setWifiIP(info.getWifiIP());
-            c.setName(info.getName());
-            c.setDescription(info.getDescription());
-            c.setWifiRSSI(info.getWifiRSSI());
-            c.setStatus("online");
-            controllerRepository.save(c);
+            try {
+                c.setUptime(info.getUptime());
+                c.setUptimeRaw(info.getUptimeRaw());
+                c.setFreeMemory(info.getFreeMemory());
+                c.setVersion(info.getVersion());
+                c.setEthIP(info.getEthIP());
+                c.setWifiIP(info.getWifiIP());
+                c.setName(info.getName());
+                c.setDescription(info.getDescription());
+                c.setWifiRSSI(info.getWifiRSSI());
+                c.setStatus("online");
+                controllerRepository.save(c);
+            }
+            catch (Exception e) {
+                logger.error(e.getLocalizedMessage());
+            }
         }
     }
 
