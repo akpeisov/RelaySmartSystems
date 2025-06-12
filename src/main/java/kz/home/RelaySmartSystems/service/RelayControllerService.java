@@ -227,6 +227,7 @@ public class RelayControllerService {
             rcOutput.setType(rcUpdateOutput.getType());
             rcOutput.setLimit(rcUpdateOutput.getLimit());
             rcOutput.set_default(rcUpdateOutput.get_default());
+            outputRepository.save(rcOutput);
             return "OK";
         } else {
             return "Output not found";
