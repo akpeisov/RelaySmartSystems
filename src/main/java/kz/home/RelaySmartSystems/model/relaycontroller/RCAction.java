@@ -24,7 +24,7 @@ public class RCAction {
     private Integer order;
     private Integer output;
     private String action;
-    private Integer duration; // только для action = wait
+    private Integer duration;
     private Integer slaveId;
     @JsonBackReference
     @JoinColumn(name = "event_uuid", nullable=false)

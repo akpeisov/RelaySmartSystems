@@ -121,7 +121,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if (tokenData.getErrorText() != null) {
                     logger.error(String.format("Token error %s", tokenData.getErrorText()));
                     session.sendMessage(new TextMessage(errorMessage(String.format("Token error. %s. Closing connection.", tokenData.getErrorText()))));
-                    session.close(CloseStatus.GOING_AWAY);
+                    session.close();
                     break;
                 }
                 wsSession.setType(hello.getType());
@@ -156,7 +156,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     }
                 } else {
                     session.sendMessage(new TextMessage(errorMessage("No identifiers!")));
-                    session.close(CloseStatus.GOING_AWAY);
+                    session.close();
                     break;
                 }
                 //setTypeForWSSession(session, hello.getType());
@@ -381,16 +381,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
-            case "MODBUSREQUEST":
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCModbusRequest rcModbusRequest = objectMapper.readValue(json, RCModbusRequest.class);
-                    if (rcModbusRequest.getSlaveUUID() != null) {
-                        logger.info("MODBUSREQUEST" + rcModbusRequest.getSlaveId());
-                        relayControllerService.setSlave(wsSession.getUser(), rcModbusRequest.getSlaveUUID(), rcModbusRequest.getMasterUUID(), rcModbusRequest.getSlaveId());
-                    }
-                }
-                break;
-
             case "TEST":
                 // команда отправки конфига на контроллер
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
@@ -480,7 +470,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             wsSessions.remove(sessionToDel);
 
         //wsSessions.remove(new WSSession(session));
-        logger.info(String.format("Client %s disconnected with ID %s. Status %s", type, session.getId(), status));
+        logger.info(String.format("Client %s disconnected with ID %s", type, session.getId()));
         super.afterConnectionClosed(session, status);
     }
 
@@ -514,19 +504,18 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void sendMessageToWebUser(User user, String message) {
         // Отправка сообщения во все пользовательские сессии
         if (user == null) {
-            // на непривязанные контроллеры отправлять некому
-            //logger.error("User is null");
+            logger.error("User is null");
             return;
         }
 
-        //logger.info(String.format("sendMessageToWebUser User %s. Message %s", user.getId(), message));
+        logger.info(String.format("sendMessageToWebUser User %s. Message %s", user.getId(), message));
 
         for (WSSession session: wsSessions) {
             if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {
                 try {
                     if (session.getSession().isOpen()) {
                         session.getSession().sendMessage(new TextMessage(message));
-                        //logger.info(String.format("Message to user %s sent", user.getFio()));
+                        logger.info(String.format("Message to user %s sent", user.getFio()));
                     }
                 } catch (IOException e) {
                     e.printStackTrace();

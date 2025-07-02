@@ -9,8 +9,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -46,15 +44,6 @@ public class Controller {
     private Date lastSeen;
 //    @Transient
 //    private Object controllerData;
-
-//    @JsonBackReference
-//    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-//    @JoinColumn(name = "master_id")
-//    private Controller parent;
-//
-//    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-//    private Set<Controller> slave = new HashSet<Controller>();
-//    private Integer slaveId;
 
     @Transient
     private boolean linked;
