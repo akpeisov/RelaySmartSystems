@@ -1,7 +1,10 @@
 package kz.home.RelaySmartSystems.model;
 
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -15,6 +18,7 @@ public class WSSession {
     private String clientIP;
     private boolean authorized = false;
     private Object obj;
+    private Date lastSend = new Date();
 
     public WSSession(WebSocketSession session) {
         this.session = session;
@@ -90,5 +94,15 @@ public class WSSession {
 
     public void setObj(Object obj) {
         this.obj = obj;
+    }
+
+    public boolean isExpired() {
+        Date now = new Date();
+        return now.getTime() - lastSend.getTime() > 55 * 1000;
+    }
+
+    public void sendMessage(WebSocketMessage<?> message) throws IOException {
+        lastSend = new Date();
+        session.sendMessage(message);
     }
 }
