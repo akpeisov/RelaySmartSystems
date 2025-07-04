@@ -122,4 +122,7 @@ public class ControllerService {
         controllerRepository.setOffline();
     }
 
+    public void setOffline2() {
+        controllerRepository.setOffline();
+    }
 }
