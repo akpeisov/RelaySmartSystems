@@ -194,7 +194,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     relayController.setMac(wsSession.getControllerId());
                     relayControllerService.addRelayController(relayController, null);
                     wsSession.setAuthorized(true);
-                    session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
+                    //session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
+                    wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
                 } else {
                     session.sendMessage(new TextMessage(errorMessage("Unknown type")));
                 }
@@ -290,11 +291,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     if (rcUpdateOutput.getUuid() != null) {
                         String res = relayControllerService.updateOutput(rcUpdateOutput);
                         if ("OK".equalsIgnoreCase(res))
-                            session.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                            wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
                         else
-                            session.sendMessage(new TextMessage(errorMessage(res)));
+                            wsSession.sendMessage(new TextMessage(errorMessage(res)));
                     } else {
-                        session.sendMessage(new TextMessage(errorMessage("No uuid present")));
+                        wsSession.sendMessage(new TextMessage(errorMessage("No uuid present")));
                     }
                 }
                 break;
@@ -307,11 +308,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     if (rcUpdateInput.getUuid() != null) {
                         String res = relayControllerService.updateInput(rcUpdateInput);
                         if ("OK".equalsIgnoreCase(res))
-                            session.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                            wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
                         else
-                            session.sendMessage(new TextMessage(errorMessage(res)));
+                            wsSession.sendMessage(new TextMessage(errorMessage(res)));
                     } else {
-                        session.sendMessage(new TextMessage(errorMessage("No uuid present")));
+                        wsSession.sendMessage(new TextMessage(errorMessage("No uuid present")));
                     }
                 }
                 break;
@@ -325,17 +326,17 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         if (controller != null) {
                             // проверить готов ли контроллер к линку
                             if (controller.isLinked()) {
-                                session.sendMessage(new TextMessage(errorMessage("Controller already linked")));
+                                wsSession.sendMessage(new TextMessage(errorMessage("Controller already linked")));
                             } else {
                                 //session.sendMessage(new TextMessage(AlertMessage.makeAlert(controller.getType())));
                                 // проверить онлайн ли сейчас контроллер
                                 if (!isControllerOnline(linkRequest.getMac())) {
-                                    session.sendMessage(new TextMessage(errorMessage("Controller is offline. Make sure that is powered on and connect to internet.")));
+                                    wsSession.sendMessage(new TextMessage(errorMessage("Controller is offline. Make sure that is powered on and connect to internet.")));
                                 } else {
                                     Map<String, Object> payld = new HashMap<>();
                                     //payld.put("message", 123);
                                     payld.put("controllertype", controller.getType());
-                                    session.sendMessage(new TextMessage(WSTextMessage.send("LINK", payld)));
+                                    wsSession.sendMessage(new TextMessage(WSTextMessage.send("LINK", payld)));
                                     // find controller and wait link event from it
                                     // make temporary flag
                                     wsSession.setControllerId(linkRequest.getMac());
@@ -343,12 +344,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
                                 }
                             }
                         } else {
-                            session.sendMessage(new TextMessage(errorMessage("Controller not found")));
+                            wsSession.sendMessage(new TextMessage(errorMessage("Controller not found")));
                         }
                     } else if ("linkRequestTimeout".equalsIgnoreCase(linkRequest.getEvent())) {
                         wsSession.setObj(null);
                     } else {
-                        session.sendMessage(new TextMessage(errorMessage("Controller not found")));
+                        wsSession.sendMessage(new TextMessage(errorMessage("Controller not found")));
                     }
                 }
                 break;
@@ -360,7 +361,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     if ("test".equalsIgnoreCase(controller.getMac())) {
                         //session.sendMessage(new TextMessage("OK"));
                         //session.sendMessage(new TextMessage(errorMessage("Test")));
-                        session.sendMessage(new TextMessage(successMessage("Test")));
+                        wsSession.sendMessage(new TextMessage(successMessage("Test")));
                     }
                     else if (controller.getMac() != null) {
                         if (isControllerOnline(controller.getMac())) {
@@ -372,10 +373,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
                             logger.info(String.format("sendMessageToController %s", res));
                             if (!"OK".equalsIgnoreCase(res)) {
-                                session.sendMessage(new TextMessage(errorMessage(res)));
+                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
                             }
                         } else {
-                            session.sendMessage(new TextMessage(errorMessage("Controller offline")));
+                            wsSession.sendMessage(new TextMessage(errorMessage("Controller offline")));
                         }
                     }
                 }
@@ -498,7 +499,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     controllerId.toUpperCase().equals(session.getControllerId())) {
                 try {
                     if (session.getSession().isOpen()) {
-                        session.getSession().sendMessage(new TextMessage(message));
+                        //session.getSession().sendMessage(new TextMessage(message));
+                        session.sendMessage(new TextMessage(message));
                         return "OK";
                     }
                 } catch (IOException e) {
@@ -524,7 +526,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
             if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {
                 try {
                     if (session.getSession().isOpen()) {
-                        session.getSession().sendMessage(new TextMessage(message));
+                        //session.getSession().sendMessage(new TextMessage(message));
+                        session.sendMessage(new TextMessage(message));
                         logger.info(String.format("Message to user %s sent", user.getFio()));
                     }
                 } catch (IOException e) {
@@ -647,9 +650,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
     @Scheduled(fixedRate = 5000)
     private void alive() throws IOException {
         for (WSSession wsSession : wsSessions) {
-            if (wsSession != null && "web".equalsIgnoreCase(wsSession.getType()) && wsSession.getSession().isOpen()) {
+            if (wsSession != null && "web".equalsIgnoreCase(wsSession.getType()) &&
+                    wsSession.getSession().isOpen() && wsSession.isExpired()) {
                 String date = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date());
-                wsSession.getSession().sendMessage(new TextMessage(AlertMessage.makeAlert(String.format("alive %s", date))));
+                //wsSession.getSession().sendMessage(new TextMessage(AlertMessage.makeAlert(String.format("alive %s", date))));
+                wsSession.sendMessage(new TextMessage(AlertMessage.makeAlert(String.format("alive %s", date))));
             }
         }
     }
