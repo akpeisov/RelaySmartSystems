@@ -1,5 +1,8 @@
+.idea/
+**/target
+src_old/
+
 # Compiled class file
-target/
 *.class
 
 # Log file

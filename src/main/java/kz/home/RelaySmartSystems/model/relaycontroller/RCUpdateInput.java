@@ -21,4 +21,3 @@ public class RCUpdateInput {
     private String type;
     private List<RCEvent> events;
 }
-
