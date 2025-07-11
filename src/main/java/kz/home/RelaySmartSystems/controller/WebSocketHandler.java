@@ -125,6 +125,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     break;
                 }
                 wsSession.setType(hello.getType());
+                // TODO : убрать после теста
+                if (hello.getType().equalsIgnoreCase("WEB1"))
+                    wsSession.setType("WEB");
 
                 if (tokenData.getMac() != null) {
                     // Это контроллер
@@ -163,27 +166,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 wsSession.setAuthorized(true);
                 session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
                 break;
-
-//            case "CHECK":
-//                // проверить наличие контроллера
-//                if (controllerService.findController(wsSession.getControllerId()) == null) {
-//                    logger.info(String.format("controller %s not found. Trying to add it",
-//                            wsSession.getControllerId()));
-//                    if ("relaycontroller".equalsIgnoreCase(wsSession.getType())) {
-//
-//                    }
-//                    //controllerService.addController(wsSession.getControllerId().toUpperCase(), wsSession.getType());
-//                    // запросить конфиг устройства
-//                    session.sendMessage(new TextMessage(getCmdMessage("GETDEVICECONFIG")));
-//                } else {
-//                    // существует
-//                    session.sendMessage(new TextMessage(getCmdMessage("READY")));
-//                }
-//                if (controllerService.isControllerLinked(wsSession.getControllerId())) {
-//                    wsSession.setUser(controllerService.findControllerOwner(wsSession.getControllerId()));
-//                }
-//                controllerService.setControllerOnline(wsSession.getControllerId());
-//                break;
 
             case "DEVICECONFIG":
                 // получение конфига от контроллера
@@ -384,10 +366,17 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
             case "MODBUSREQUEST":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCModbusRequest rcModbusRequest = objectMapper.readValue(json, RCModbusRequest.class);
-                    if (rcModbusRequest.getSlaveUUID() != null) {
-                        logger.info("MODBUSREQUEST" + rcModbusRequest.getSlaveId());
-                        relayControllerService.setSlave(wsSession.getUser(), rcModbusRequest.getSlaveUUID(), rcModbusRequest.getMasterUUID(), rcModbusRequest.getSlaveId());
+                    try {
+                        RCModbusRequest rcModbusRequest = objectMapper.readValue(json, RCModbusRequest.class);
+                        if (rcModbusRequest.getSlaveUUID() != null) {
+                            logger.info("MODBUSREQUEST" + rcModbusRequest.getSlaveId());
+                            String res = relayControllerService.setSlave(wsSession.getUser(), rcModbusRequest.getSlaveUUID(), rcModbusRequest.getMasterUUID(), rcModbusRequest.getSlaveId());
+                            if (!"OK".equalsIgnoreCase(res)) {
+                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
+                            }
+                        }
+                    } catch (Exception e) {
+                        wsSession.sendMessage(new TextMessage(errorMessage(e.getLocalizedMessage())));
                     }
                 }
                 break;
@@ -631,22 +620,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
         return controllerService.isControllerLinked(mac);
     }
 
-
-
-//    @Scheduled(fixedRate = 5000)
-    private void test() throws IOException {
-        RCUpdate rcUpdateMessage = new RCUpdate();
-        rcUpdateMessage.setMac("30AEA48662E0");
-        Random rnd = new Random();
-        rcUpdateMessage.setOutput(rnd.nextInt(8));
-        rcUpdateMessage.setState(rnd.nextBoolean() ? "on" : "off");
-
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getUsername() != null)
-                wsSession.getSession().sendMessage(new TextMessage(rcUpdateMessage.makeMessage()));
-            //"{\"type\": \"test\", \"payload\": {\"id\": 123}}"
-        }
-    }
     @Scheduled(fixedRate = 5000)
     private void alive() throws IOException {
         for (WSSession wsSession : wsSessions) {

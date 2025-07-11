@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Controller Interface</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+      cursor: pointer;
+    }
+    .circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-left: 5px;
+    }
+    .gray {
+      background-color: gray;
+    }
+    .green {
+      background-color: green;
+    }
+    #log {
+      border: 1px solid #ccc;
+      height: 150px;
+      overflow-y: scroll;
+      white-space: pre-wrap;
+      padding: 10px;
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div id="info"></div>
+  <table id="ioTable"></table>
+  <div id="log"></div>
+
+  <script>
+    let config, ws;
+    let state = { inputs: {}, outputs: {} };
+
+    async function init() {
+      const res = await fetch('config.json');
+      config = await res.json();
+
+      config.inputs.forEach(i => {
+        if (i.id <= 15) state.inputs[i.id] = i;
+        else state.inputs[i.id] = i; // buttons also here
+      });
+      config.outputs.forEach(o => state.outputs[o.id] = o);
+
+      document.getElementById('info').innerHTML = `
+        <strong>MAC:</strong> ${config.mac} | 
+        <strong>Name:</strong> ${config.name} |
+        <strong>Status:</strong> ${config.status} |
+        <strong>Type:</strong> ${config.type}
+      `;
+
+      renderTable();
+      connectWebSocket();
+    }
+
+    function renderTable() {
+      const table = document.getElementById('ioTable');
+      table.innerHTML = '';
+
+      const inputRow = document.createElement('tr');
+      const buttonRow = document.createElement('tr');
+      const outputRow = document.createElement('tr');
+
+      const inputs = Object.values(state.inputs).filter(i => i.id <= 15);
+      const buttons = Object.values(state.inputs).filter(i => i.id > 15);
+      const outputs = Object.values(state.outputs);
+
+      inputs.forEach(input => {
+        const td = document.createElement('td');
+        td.innerHTML = `${input.name} <span class="circle ${input.state === 'on' ? 'green' : 'gray'}"></span>`;
+        td.onclick = () => toggleState('input', input.id);
+        inputRow.appendChild(td);
+      });
+
+      buttons.forEach(button => {
+        const td = document.createElement('td');
+        td.innerText = button.name;
+        td.onclick = () => triggerButtonEvent(button);
+        buttonRow.appendChild(td);
+      });
+
+      outputs.forEach(output => {
+        const td = document.createElement('td');
+        td.innerHTML = `${output.name} <span class="circle ${output.state === 'on' ? 'green' : 'gray'}"></span>`;
+        td.onclick = () => toggleState('output', output.id);
+        outputRow.appendChild(td);
+      });
+
+      table.appendChild(inputRow);
+      table.appendChild(buttonRow);
+      table.appendChild(outputRow);
+    }
+
+    function toggleState(type, id) {
+      let obj = type === 'input' ? state.inputs[id] : state.outputs[id];
+      obj.state = obj.state === 'on' ? 'off' : 'on';
+      renderTable();
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const payload = {
+          type: "UPDATE",
+          payload: {
+            mac: config.mac,
+            [type]: id,
+            state: obj.state
+          }
+        };
+        ws.send(JSON.stringify(payload));
+      }
+    }
+
+    function triggerButtonEvent(button) {
+      const event = button.events.find(e => e.event === 'toggle');
+      if (!event) return;
+      event.actions.forEach(action => {
+        const output = state.outputs[action.output];
+        if (!output) return;
+        if (action.action === 'toggle') {
+          output.state = output.state === 'on' ? 'off' : 'on';
+        } else if (action.action === 'on') {
+          output.state = 'on';
+        } else if (action.action === 'off') {
+          output.state = 'off';
+        }
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: "UPDATE",
+            payload: {
+              mac: config.mac,
+              output: output.id,
+              state: output.state
+            }
+          }));
+        }
+      });
+      renderTable();
+    }
+
+    function connectWebSocket() {
+      const url = config.ws.replace('http', 'ws');
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: "HELLO",
+          payload: {
+            type: "WEB1",
+            token: "123456"
+          }
+        }));
+        log('Connected and sent HELLO');
+      };
+
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        log(`RECEIVED @ ${new Date().toLocaleTimeString()}:\n${JSON.stringify(msg, null, 2)}`);
+      };
+
+      ws.onerror = (e) => log('WebSocket error');
+      ws.onclose = () => log('WebSocket closed');
+    }
+
+    function log(message) {
+      const logDiv = document.getElementById('log');
+      logDiv.textContent += message + "\n";
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>

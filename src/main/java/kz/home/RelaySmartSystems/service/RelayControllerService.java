@@ -29,6 +29,7 @@ public class RelayControllerService {
     private final RCActionRepository rcActionRepository;
     private final RCAclRepository rcAclRepository;
     private final RCModbusRepository rcModbusRepository;
+    private final ControllerService controllerService;
     private static final Logger logger = LoggerFactory.getLogger(RelayControllerService.class);
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
                                   RCOutputRepository outputRepository,
@@ -36,7 +37,8 @@ public class RelayControllerService {
                                   RCEventRepository rcEventRepository,
                                   RCActionRepository rcActionRepository,
                                   RCAclRepository rcAclRepository,
-                                  RCModbusRepository rcModbusRepository) {
+                                  RCModbusRepository rcModbusRepository,
+                                  ControllerService controllerService) {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
         this.inputRepository = inputRepository;
@@ -44,6 +46,7 @@ public class RelayControllerService {
         this.rcActionRepository = rcActionRepository;
         this.rcAclRepository = rcAclRepository;
         this.rcModbusRepository = rcModbusRepository;
+        this.controllerService = controllerService;
     }
 
     public RelayController addRelayController(RelayController relayController, User user) {
@@ -576,27 +579,32 @@ public class RelayControllerService {
         return "{}";
     }
 
-    public void setSlave(User user, UUID slave, UUID master, Integer slaveId) {
-        Optional<RCModbus> optionalRCModbus = rcModbusRepository.findById(slave);
+
+
+    public String setSlave(User user, UUID slave, UUID master, Integer slaveId) {
+        //Optional<RCModbus> optionalRCModbus = rcModbusRepository.findById(slave);
         // TODO : проверить что и слейв и мастер принадлежат пользователю
         // проверить что нет циклической связи
-        // проверить что slaveid > 0 и < 250
-        if (optionalRCModbus.isPresent()) {
-            RCModbus rcModbus = optionalRCModbus.get();
-            if (rcModbus.getUser() == user) {
-                rcModbus.setMasterUUID(master);
-                rcModbus.setSlaveId(slaveId);
-                rcModbusRepository.save(rcModbus);
-            } else {
-                logger.error("RCModbus found, but different user");
+        // проверить что slaveId > 0 и < 250
+        if (slaveId < 1 || slaveId > 250) {
+            return "SlaveId must be in 1..250";
+        }
+        if (!controllerService.isControllerBelongs(slave, user)) {
+            return "Controller belongs to another user";
+        }
+        try {
+            RCModbus rcModbus = rcModbusRepository.findBySlaveUUID(slave);
+            if (rcModbus == null) {
+                rcModbus = new RCModbus();
+//                rcModbus.setSlaveUUID(slave);
             }
-        } else {
-            RCModbus rcModbus = new RCModbus();
-            rcModbus.setMasterUUID(master);
-            rcModbus.setUuid(slave);
+//            rcModbus.setMasterUUID(master);
             rcModbus.setSlaveId(slaveId);
             rcModbusRepository.save(rcModbus);
+        } catch (Exception e) {
+            return e.getLocalizedMessage();
         }
+        return "OK";
     }
 
 

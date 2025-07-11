@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Tester</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    input[type="text"] {
+      width: 400px;
+      padding: 8px;
+      margin: 5px;
+    }
+    button {
+      padding: 8px 12px;
+      margin: 5px;
+    }
+    .request-block {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .messages {
+      margin-top: 20px;
+      padding: 10px;
+      background: #f7f7f7;
+      border: 1px solid #ddd;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>WebSocket Tester</h1>
+  <div>
+    <input type="text" id="wsUrl" placeholder="wss://example.com/socket">
+    <button id="connectBtn">Connect</button>
+    <span id="status">Disconnected</span>
+  </div>
+  <div>
+    <button id="addRequestBtn">Add Request</button>
+    <button id="clearMessagesBtn">Clear Messages</button>
+  </div>
+  <div id="requestsContainer"></div>
+  <h3>Messages from server:</h3>
+  <div id="messages" class="messages"></div>
+
+  <script>
+    let socket = null;
+    const connectBtn = document.getElementById('connectBtn');
+    const wsUrlInput = document.getElementById('wsUrl');
+    const statusSpan = document.getElementById('status');
+    const requestsContainer = document.getElementById('requestsContainer');
+    const messagesDiv = document.getElementById('messages');
+    const addRequestBtn = document.getElementById('addRequestBtn');
+    const clearMessagesBtn = document.getElementById('clearMessagesBtn');
+
+    function getTimestamp() {
+      return new Date().toLocaleTimeString();
+    }
+
+    connectBtn.addEventListener('click', () => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+        return;
+      }
+
+      const url = wsUrlInput.value.trim();
+      if (!url) return alert('Please enter a WebSocket URL');
+
+      try {
+        socket = new WebSocket(url);
+        statusSpan.textContent = 'Connecting...';
+        connectBtn.textContent = 'Disconnect';
+
+        socket.onopen = () => {
+          statusSpan.textContent = 'Connected';
+          connectBtn.textContent = 'Disconnect';
+        };
+
+        socket.onmessage = (event) => {
+          const msg = `[${getTimestamp()}] [RECEIVED] ${event.data}\n`;
+          messagesDiv.textContent += msg;
+          messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        };
+
+        socket.onclose = () => {
+          statusSpan.textContent = 'Disconnected';
+          connectBtn.textContent = 'Connect';
+        };
+
+        socket.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          statusSpan.textContent = 'Error';
+          connectBtn.textContent = 'Connect';
+        };
+      } catch (err) {
+        alert('Failed to connect: ' + err.message);
+        connectBtn.textContent = 'Connect';
+      }
+    });
+
+    clearMessagesBtn.addEventListener('click', () => {
+      messagesDiv.textContent = '';
+    });
+
+    addRequestBtn.addEventListener('click', () => {
+      const block = document.createElement('div');
+      block.className = 'request-block';
+
+      const input = document.createElement('textarea');
+      input.rows = 3;
+      input.style.width = '100%';
+
+      const sendBtn = document.createElement('button');
+      sendBtn.textContent = 'Send';
+
+      sendBtn.addEventListener('click', () => {
+        const message = input.value;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          alert('WebSocket is not connected.');
+          return;
+        }
+        socket.send(message);
+        messagesDiv.textContent += `[${getTimestamp()}] [SENT] ${message}\n`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+
+      block.appendChild(input);
+      block.appendChild(sendBtn);
+      requestsContainer.appendChild(block);
+    });
+  </script>
+</body>
+</html>

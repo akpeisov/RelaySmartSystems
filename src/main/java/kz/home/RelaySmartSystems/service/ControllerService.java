@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class ControllerService {
@@ -122,4 +124,8 @@ public class ControllerService {
         controllerRepository.setOffline();
     }
 
+    public boolean isControllerBelongs(UUID uuid, User user) {
+        Optional<Controller> c = controllerRepository.findById(uuid);
+        return c.map(controller -> controller.getUser().equals(user)).orElse(false);
+    }
 }

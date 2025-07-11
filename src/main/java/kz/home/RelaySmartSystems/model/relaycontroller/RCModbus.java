@@ -4,8 +4,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
+import javax.persistence.*;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -13,7 +13,21 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Table(name = "rc_modbus")
-public class RCModbus extends RelayController {
-    UUID masterUUID;
+public class RCModbus {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    UUID uuid;
+
+    @OneToOne
+    RelayController master;
+    //UUID masterUUID;
+
+//    @OneToMany
+//    RelayController slave;
+
+    @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    private Set<RelayController> slaves;
+
+    //UUID slaveUUID;
     Integer slaveId;
 }
