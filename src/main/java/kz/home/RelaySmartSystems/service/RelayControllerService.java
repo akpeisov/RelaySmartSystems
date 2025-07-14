@@ -3,8 +3,10 @@ package kz.home.RelaySmartSystems.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.dto.RelayControllerDTO;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.*;
+import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -193,21 +195,29 @@ public class RelayControllerService {
     public String makeDeviceConfig(String mac) {
         // формирование конфигурации устройства для отправки на устройство
         String json = "{}";
-        RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
-        if (c != null) {
-            Map<String, Object> objectMap = new HashMap<>();
-            objectMap.put("type", "SETDEVICECONFIG");
-            objectMap.put("payload", c);
+        try {
+            RelayController controller = relayControllerRepository.findByMac(mac.toUpperCase());
+            if (controller != null) {
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            try {
-                json = objectMapper.writeValueAsString(objectMap);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+                ModelMapper modelMapper = new ModelMapper();
+                RelayControllerDTO relayControllerDTO = modelMapper.map(controller, RelayControllerDTO.class);
+
+                Map<String, Object> objectMap = new HashMap<>();
+                objectMap.put("type", "SETDEVICECONFIG");
+                objectMap.put("payload", relayControllerDTO);
+
+                ObjectMapper objectMapper = new ObjectMapper();
+                try {
+                    json = objectMapper.writeValueAsString(objectMap);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
             }
-        }
 
-        json = Utils.removeFieldsJSON(json, "uuid", "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
+            json = Utils.removeFieldsJSON(json, "uuid", "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage());
+        }
         return json;
     }
 
@@ -592,18 +602,18 @@ public class RelayControllerService {
         if (!controllerService.isControllerBelongs(slave, user)) {
             return "Controller belongs to another user";
         }
-        try {
-            RCModbus rcModbus = rcModbusRepository.findBySlaveUUID(slave);
-            if (rcModbus == null) {
-                rcModbus = new RCModbus();
-//                rcModbus.setSlaveUUID(slave);
-            }
-//            rcModbus.setMasterUUID(master);
-            rcModbus.setSlaveId(slaveId);
-            rcModbusRepository.save(rcModbus);
-        } catch (Exception e) {
-            return e.getLocalizedMessage();
-        }
+//        try {
+//            RCModbus rcModbus = rcModbusRepository.findBySlaveUUID(slave);
+//            if (rcModbus == null) {
+//                rcModbus = new RCModbus();
+////                rcModbus.setSlaveUUID(slave);
+//            }
+////            rcModbus.setMasterUUID(master);
+//            rcModbus.setSlaveId(slaveId);
+//            rcModbusRepository.save(rcModbus);
+//        } catch (Exception e) {
+//            return e.getLocalizedMessage();
+//        }
         return "OK";
     }
 

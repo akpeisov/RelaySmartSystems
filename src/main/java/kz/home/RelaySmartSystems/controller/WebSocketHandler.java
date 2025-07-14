@@ -336,33 +336,33 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
-            case "UPLOADCONFIG":
-                // команда отправки конфига на контроллер
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    Controller controller = objectMapper.readValue(json, Controller.class);
-                    if ("test".equalsIgnoreCase(controller.getMac())) {
-                        //session.sendMessage(new TextMessage("OK"));
-                        //session.sendMessage(new TextMessage(errorMessage("Test")));
-                        wsSession.sendMessage(new TextMessage(successMessage("Test")));
-                    }
-                    else if (controller.getMac() != null) {
-                        if (isControllerOnline(controller.getMac())) {
-                            // make config and send to controller
-                            String res = sendMessageToController(controller.getMac(), relayControllerService.makeDeviceConfig(controller.getMac()));
-                            //logger.info("len " +relayControllerService.makeDeviceConfig(controller.getMac()).getBytes().length);
-                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\"}");
-                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\", \"payload\": \"" +genTest(5500)+ "\"}");
-
-                            logger.info(String.format("sendMessageToController %s", res));
-                            if (!"OK".equalsIgnoreCase(res)) {
-                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
-                            }
-                        } else {
-                            wsSession.sendMessage(new TextMessage(errorMessage("Controller offline")));
-                        }
-                    }
-                }
-                break;
+//            case "UPLOADCONFIG":
+//                // команда отправки конфига на контроллер
+//                if ("web".equalsIgnoreCase(wsSession.getType())) {
+//                    Controller controller = objectMapper.readValue(json, Controller.class);
+//                    if ("test".equalsIgnoreCase(controller.getMac())) {
+//                        //session.sendMessage(new TextMessage("OK"));
+//                        //session.sendMessage(new TextMessage(errorMessage("Test")));
+//                        wsSession.sendMessage(new TextMessage(successMessage("Test")));
+//                    }
+//                    else if (controller.getMac() != null) {
+//                        if (isControllerOnline(controller.getMac())) {
+//                            // make config and send to controller
+//                            String res = sendMessageToController(controller.getMac(), relayControllerService.makeDeviceConfig(controller.getMac()));
+//                            //logger.info("len " +relayControllerService.makeDeviceConfig(controller.getMac()).getBytes().length);
+//                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\"}");
+//                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\", \"payload\": \"" +genTest(5500)+ "\"}");
+//
+//                            logger.info(String.format("sendMessageToController %s", res));
+//                            if (!"OK".equalsIgnoreCase(res)) {
+//                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
+//                            }
+//                        } else {
+//                            wsSession.sendMessage(new TextMessage(errorMessage("Controller offline")));
+//                        }
+//                    }
+//                }
+//                break;
 
             case "MODBUSREQUEST":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
@@ -392,7 +392,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Command command = objectMapper.readValue(json, Command.class);
-                    logger.info(command.getMac(), command.getCommand());
+                    logger.info(String.format("Command %s, mac %s", command.getCommand(), command.getMac()));
                     if ("enableSendLogs".equalsIgnoreCase(command.getCommand())) {
                         Map<String, Object> payld = new HashMap<>();
                         payld.put("send", true);
@@ -405,6 +405,31 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         Map<String, Object> payld = new HashMap<>();
                         payld.put("url", "https://akpeisov.kz/RelayController/relay32.bin");
                         sendMessageToController(command.getMac(), WSTextMessage.send("OTA", payld));
+                    } else if ("INFO".equalsIgnoreCase(command.getCommand())) {
+                        sendMessageToController(command.getMac(), WSTextMessage.send("INFO", null));
+                    } else if ("REBOOT".equalsIgnoreCase(command.getCommand())) {
+                        sendMessageToController(command.getMac(), WSTextMessage.send("REBOOT", null));
+                    } else if ("UPLOADCONFIG".equalsIgnoreCase(command.getCommand())) {
+                        if (isControllerOnline(command.getMac())) {
+//                            // make config and send to controller
+                            String deviceConfig = relayControllerService.makeDeviceConfig(command.getMac());
+//                            logger.info(deviceConfig);
+                            if (!"{}".equalsIgnoreCase(deviceConfig)) {
+                                String res = sendMessageToController(command.getMac(), relayControllerService.makeDeviceConfig(command.getMac()));
+                                logger.info(String.format("sendMessageToController %s", res));
+                                if ("OK".equalsIgnoreCase(res)) {
+                                    wsSession.sendMessage(new TextMessage(successMessage("Successfully")));
+                                } else {
+                                    wsSession.sendMessage(new TextMessage(errorMessage(res)));
+                                }
+                            } else {
+                                wsSession.sendMessage(new TextMessage(errorMessage("Can't generate device config")));
+                            }
+                        } else {
+                            wsSession.sendMessage(new TextMessage(errorMessage("Controller offline")));
+                        }
+                    } else if ("TEST".equalsIgnoreCase(command.getCommand())) {
+                        wsSession.sendMessage(new TextMessage(successMessage("Test ok")));
                     }
                 }
                 break;

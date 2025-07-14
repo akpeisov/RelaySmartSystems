@@ -31,8 +31,7 @@ public class RCOutput {
     private String room;
     private Integer on;
     private Integer off;
-//    @Column(name="slave_id" default 0)
-    private Integer slaveId = 0; // don't work, always null
+    private Integer slaveId = 0;
 
     @JsonBackReference
     @ManyToOne(optional = false)  //(optional = false, cascade = CascadeType.ALL)

@@ -15,8 +15,8 @@ import java.util.UUID;
 
 @Getter
 @Setter
-@Entity
 @NoArgsConstructor
+@Entity
 @Table(name = "rc_controllers")
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -30,4 +30,18 @@ public class RelayController extends Controller {
     @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @OrderBy("id ASC")
     private Set<RCInput> inputs;
+
+    @OneToMany(mappedBy = "master", cascade = CascadeType.ALL)
+    private List<RCModbus> slaves;
+
+    @OneToOne(mappedBy = "slave")
+    private RCModbus slaveOf;
+
+    public boolean isMaster() {
+        return slaves != null && !slaves.isEmpty();
+    }
+
+    public boolean isSlave() {
+        return slaveOf != null;
+    }
 }

@@ -8,6 +8,7 @@ import kz.home.RelaySmartSystems.model.WSSession;
 import kz.home.RelaySmartSystems.model.def.CRequest;
 import kz.home.RelaySmartSystems.model.def.CResponse;
 import kz.home.RelaySmartSystems.model.dto.WSSessionDTO;
+import kz.home.RelaySmartSystems.model.mapper.RelayControllerMapper;
 import kz.home.RelaySmartSystems.model.relaycontroller.RCInput;
 import kz.home.RelaySmartSystems.model.relaycontroller.RCUpdateInput;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
@@ -43,18 +44,20 @@ public class WebAPI {
     private final ControllerService controllerService;
     private final WebSocketHandler webSocketHandler;
     private final RelayControllerService relayControllerService;
+    private final RelayControllerMapper relayControllerMapper;
     public WebAPI(RelayControllerRepository relayControllerRepository,
                   UniControllerRepository uniControllerRepository,
                   UserService userService,
                   ControllerService controllerService,
                   WebSocketHandler webSocketHandler,
-                  RelayControllerService relayControllerService) {
+                  RelayControllerService relayControllerService, RelayControllerMapper relayControllerMapper) {
         this.relayControllerRepository = relayControllerRepository;
         this.uniControllerRepository = uniControllerRepository;
         this.userService = userService;
         this.controllerService = controllerService;
         this.webSocketHandler = webSocketHandler;
         this.relayControllerService = relayControllerService;
+        this.relayControllerMapper = relayControllerMapper;
     }
 
     @GetMapping("/userDevices")
@@ -77,8 +80,9 @@ public class WebAPI {
         List<Object> controllers = new ArrayList<>();
         List<Controller> userControllers = controllerService.getUserControllers(user);
         for (Controller controller : userControllers) {
-            if ("relayController".equalsIgnoreCase(controller.getType())) {
-                controllers.add(relayControllerRepository.findById(controller.getUuid()));
+            if ("relayController".equalsIgnoreCase(controller.getType()) && controller instanceof RelayController rc) {
+                //controllers.add(relayControllerRepository.findById(controller.getUuid()));
+                controllers.add(relayControllerMapper.toDto(rc));
             } else if ("uniController".equalsIgnoreCase(controller.getType())) {
                 controllers.add(uniControllerRepository.findById(controller.getUuid()));
             }

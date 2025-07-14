@@ -19,15 +19,12 @@ public class RCModbus {
     UUID uuid;
 
     @OneToOne
+    @JoinColumn(name = "master", unique = true)
     RelayController master;
-    //UUID masterUUID;
 
-//    @OneToMany
-//    RelayController slave;
+    @OneToOne
+    @JoinColumn(name = "slave", unique = true)
+    private RelayController slave;
 
-    @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private Set<RelayController> slaves;
-
-    //UUID slaveUUID;
     Integer slaveId;
 }
