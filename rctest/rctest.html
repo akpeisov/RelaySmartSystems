@@ -39,33 +39,82 @@
       padding: 10px;
       background: #f9f9f9;
     }
+    #sendConfigBtn {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <div id="info"></div>
+  <button id="sendConfigBtn">Отправить конфиг</button>
   <table id="ioTable"></table>
   <div id="log"></div>
 
-  <script>
+  <script type="module">
+    import { SignJWT, importPKCS8 } from 'https://cdn.jsdelivr.net/npm/jose@4.14.4/+esm';
+
     let config, ws;
     let state = { inputs: {}, outputs: {} };
+
+    const privateKeyPem = `-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDMom+M6TzhI91j
+5uHMJoR1A1Bxj16QJYYenCile0QWhGLSRtM/7mEE36c8J+24PZUafGlbWpDB6BZr
+hOTIv8JUNkTYGKi1ce4zJ9VAoL5gfJ8n8uBGQbXX1EPVgH2zCfRQI7+t5xoYdw53
+hQxok6+4l/znM2zkIIg3zlvqggQzNvNG9k28mrJrZmYbr/6dZbZGigqEdPCk2QoC
+MFo/KBSOSvnvjjLFvpDW1ujD8ImWh8/PxiZ6uRaZQQHedu+oSwmnTB+AhTnVZkvY
+5bV7Sd0AEeq/S1+olt8WCZaMdjTZgT2vTVi5Y5V+fZ9DTEjulA7QWU0LMjQymII+
+Tb8gHhdZAgMBAAECggEAGjQSpLCZIxs8ljZSY5nrDDDIdEIvkbW8Xt8QNWB7b4a0
+QMjg9CbKNZ2OBJ34SsdX+HRF6XTHZI0bkdkKkso7UB1C44kE0XctUU+gdw4eUqyi
+lLL9FQIFDwYXSZeSgQKdTkXFnbciGE/mgld/J0UCE1kjAVgMcYnY54x9KKJNd2Ev
+VMw0ZUUB9c35H3UfUwI0eWgmZHsdJJ3HnWc2I5+MK9JQSWmbTP5hxbQxDsO7pONn
+wAt3H7rBp7sIICIA8YOZtv24WsnzRKCMFEoKv9hL/fnqfC4kXpBVfyuYPp83GnyQ
+JW2e9f7fleSZ2fMuvf2TK8C/2j2pIlJsNTBegqJgoQKBgQDpdpPeMmrkI3coB/se
+XV2Qley+us7sL3m+YPvCav02Lw+FG1M8ViEv0onr4UP8htYVZhWdUkdxnfIF0N6S
+Z0CQ50OZGb/0JqLW047fZx12OHNxpM/opYhN6D28v7LmVjvmBImg14HU36dqrqe8
+HZZAE1Lc2l1lJMiH1tyDAnBxzwKBgQDgY28W6FgYoMSRX6g5E9BHA3KYRo1R0/ir
+MnI6RjSi94+Gh8mVWZmDDttNVEBd8TfPS5MINNUr3GqQ0njZm6+W7qmc1nizyfrV
+RRdqJ5qXZZP3FlB/KnK+lfgKS+zc+zpHvlsiaxl3wCSM99B03U5OVPGVrpa4HVKV
+3uIdB+52VwKBgQDjigCANV9czvwZdf3YEGNaweSl1+hI5dSgKmH1kNUNdDyKHKG5
+UrCxrV9jGIBspPYOkRpL5J9hKvFxnarvwdZ55AxMMX6WdPmMq1C6iAN873QEtP81
+3e/FDq7tQWEZgb6LZqzEqIYPdZP0NBmjDKsd9Dd0rRcNtxYC3vS4cy4onQKBgCCr
+mZMWRS1gyv33lYCp99s/D0JIk27klAIpGCSP8D4CGW2W+6y5HPbOBPQfXjfPVTbj
+ZAb/2kHGl+V6H4pfdpNdMGjbeTuEHvdKVfxow8NjUMXbA+FgBtDk+PZW06fhFD05
+4/8A5PZgjXHQ6xL43dvd1kba4qrv6gRULUvYycmFAoGAPueu+2b6LqlZB4XJLetx
+NTHSFDyyrHM/UeqtMA0J1uelpX9JHDa4OXjOzs2+e5DjC0/VNGfCjyp0fWuuk71H
+dA6fLtLIAllGQ0c3soohXDKRHtAEmeiri5MOHvlQieR3dpkRXwRWyh91/llFWGul
+hsEOoRXDPxct0Wbcz94jwjI=
+-----END PRIVATE KEY-----`;
+
+
+    async function generateJwtToken() {
+      const alg = 'RS256';
+      const mac = "123456789000";
+      const privateKey = await importPKCS8(privateKeyPem, alg);
+      const now = Math.floor(Date.now() / 1000);
+      return await new SignJWT({ mac })
+        .setProtectedHeader({ alg })
+        .setIssuedAt(now)
+        .setExpirationTime(now + 3600)
+        .sign(privateKey);
+    }
 
     async function init() {
       const res = await fetch('config.json');
       config = await res.json();
 
       config.inputs.forEach(i => {
-        if (i.id <= 15) state.inputs[i.id] = i;
-        else state.inputs[i.id] = i; // buttons also here
+        state.inputs[i.id] = i;
       });
       config.outputs.forEach(o => state.outputs[o.id] = o);
 
       document.getElementById('info').innerHTML = `
-        <strong>MAC:</strong> ${config.mac} | 
+        <strong>MAC:</strong> ${config.mac} |
         <strong>Name:</strong> ${config.name} |
         <strong>Status:</strong> ${config.status} |
         <strong>Type:</strong> ${config.type}
       `;
+
+      document.getElementById('sendConfigBtn').onclick = sendConfig;
 
       renderTable();
       connectWebSocket();
@@ -128,43 +177,46 @@
     }
 
     function triggerButtonEvent(button) {
-      const event = button.events.find(e => e.event === 'toggle');
+      const event = button.events?.find(e => e.event === 'toggle');
       if (!event) return;
-      event.actions.forEach(action => {
-        const output = state.outputs[action.output];
-        if (!output) return;
-        if (action.action === 'toggle') {
-          output.state = output.state === 'on' ? 'off' : 'on';
-        } else if (action.action === 'on') {
-          output.state = 'on';
-        } else if (action.action === 'off') {
-          output.state = 'off';
-        }
-
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: "UPDATE",
-            payload: {
-              mac: config.mac,
-              output: output.id,
-              state: output.state
-            }
-          }));
-        }
-      });
+      event.actions.forEach(action => handleOutputAction(action));
       renderTable();
     }
 
-    function connectWebSocket() {
+    function handleOutputAction(action) {
+      const output = state.outputs[action.output];
+      if (!output) return;
+      if (action.action === 'toggle') {
+        output.state = output.state === 'on' ? 'off' : 'on';
+      } else if (action.action === 'on') {
+        output.state = 'on';
+      } else if (action.action === 'off') {
+        output.state = 'off';
+      }
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: "UPDATE",
+          payload: {
+            mac: config.mac,
+            output: output.id,
+            state: output.state
+          }
+        }));
+      }
+    }
+
+    async function connectWebSocket() {
       const url = config.ws.replace('http', 'ws');
       ws = new WebSocket(url);
 
-      ws.onopen = () => {
+      ws.onopen = async () => {
+        const token = await generateJwtToken();
         ws.send(JSON.stringify({
           type: "HELLO",
           payload: {
-            type: "WEB1",
-            token: "123456"
+            type: "relayController",
+            token
           }
         }));
         log('Connected and sent HELLO');
@@ -173,10 +225,41 @@
       ws.onmessage = (e) => {
         const msg = JSON.parse(e.data);
         log(`RECEIVED @ ${new Date().toLocaleTimeString()}:\n${JSON.stringify(msg, null, 2)}`);
+        handleIncomingMessage(msg);
       };
 
       ws.onerror = (e) => log('WebSocket error');
       ws.onclose = () => log('WebSocket closed');
+    }
+
+    function handleIncomingMessage(msg) {
+      if (msg.type === 'ACTION') {
+        const { output, input, action } = msg.payload;
+        if (output !== undefined) {
+          handleOutputAction({ output, action });
+          renderTable();
+        } else if (input !== undefined) {
+          const inp = state.inputs[input];
+          if (!inp) return;
+          const evt = inp.events?.find(e => e.event === action);
+          if (!evt) return;
+          evt.actions.forEach(act => handleOutputAction(act));
+          renderTable();
+        }
+      } else if (msg.type === 'GETDEVICECONFIG') {
+        sendConfig();
+      }
+
+    }
+
+    function sendConfig() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: "DEVICECONFIG",
+          payload: config
+        }));
+        log('Sent device config');
+      }
     }
 
     function log(message) {

@@ -192,6 +192,12 @@ public class RelayControllerService {
         }
     }
 
+    public void saveRelayController(RelayControllerDTO relayControllerDTO) {
+        ModelMapper modelMapper = new ModelMapper();
+        RelayController relayController = modelMapper.map(relayControllerDTO, RelayController.class);
+        relayControllerRepository.save(relayController);
+    }
+
     public String makeDeviceConfig(String mac) {
         // формирование конфигурации устройства для отправки на устройство
         String json = "{}";
@@ -369,7 +375,7 @@ public class RelayControllerService {
                         List<RCAction> actionsToDelete = existingActions.stream()
                                 .filter(action -> actionsToUpdate.stream()
                                         .noneMatch(r -> r.getOrder().equals(action.getOrder())))
-                                .collect(Collectors.toList());
+                                .toList();
                         actionsToDelete.forEach(rcAction -> rcActionRepository.deleteRCAction(rcAction.getUuid()));
 
                         newEvent.setActions(actionsToUpdate);
@@ -414,6 +420,8 @@ public class RelayControllerService {
                 eventsToDelete.forEach(rcEvent -> rcEventRepository.deleteEvent(rcEvent.getUuid()));
                 rcInput.setEvents(eventsToUpdate);
                 inputRepository.save(rcInput);
+            } else {
+                return "Not found";
             }
         } catch (Exception e) {
             logger.error("Error while update input", e);

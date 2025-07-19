@@ -8,10 +8,12 @@ import kz.home.RelaySmartSystems.filters.IpHandshakeInterceptor;
 import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.def.*;
+import kz.home.RelaySmartSystems.model.dto.RelayControllerDTO;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
+import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -44,22 +46,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
         this.jwtAuthorizationFilter = jwtAuthorizationFilter;
         this.userService = userService;
     }
-
-//    @Override
-//    public void onApplicationEvent(WSEvent event) {
-//        // Обработка события
-//        try {
-//            WSTextMessage wsTextMessage = (WSTextMessage) event.getSource();
-//            if ("ACTION".equals(wsTextMessage.getType())) {
-//                // это действие, надо найти нужную сессию и отправить туда
-//                Action action = (Action)wsTextMessage.getPayload();
-//                String mac = action.getMac();
-//                sendMessageToUser(mac, wsTextMessage.makeMessage());
-//            }
-//        } catch (Exception e) {
-//
-//        }
-//    }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -172,9 +158,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // вызывается если это новый контроллер
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     //User user = controllerService.getUserByController(wsSession.getControllerId());
-                    RelayController relayController = objectMapper.readValue(json, RelayController.class);
-                    relayController.setMac(wsSession.getControllerId());
-                    relayControllerService.addRelayController(relayController, null);
+                    // TODO : to DTO
+                    RelayControllerDTO relayControllerDTO = objectMapper.readValue(json, RelayControllerDTO.class);
+                    relayControllerDTO.setMac(wsSession.getControllerId());
+                    relayControllerService.saveRelayController(relayControllerDTO);
+
+//                    RelayController relayController = objectMapper.readValue(json, RelayController.class);
+//                    relayController.setMac(wsSession.getControllerId());
+//                    relayControllerService.addRelayController(relayController, null);
                     wsSession.setAuthorized(true);
                     //session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
                     wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
@@ -243,7 +234,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     Message message1 = objectMapper.readValue(json, Message.class);
                     if (message1.getMessage() != null) {
-                        logger.info(String.format("SETDEVICECONFIG msg %s", message1.getMessage()));
+                        logger.info("SETDEVICECONFIG msg {}", message1.getMessage());
                         //session.sendMessage(new TextMessage());
                         if ("OK".equalsIgnoreCase(message1.getMessage())) {
                             sendMessageToWebUser(wsSession.getUser(), successMessage("Upload successful"));
@@ -258,10 +249,13 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // отправка действия на контроллер
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Action action = objectMapper.readValue(json, Action.class);
-                    // TODO : security check for controller's owner is correct
-                    logger.info(String.format("Sending message %s to controller %s", action.getAction(), action.getMac()));
-                    // это действие, надо найти нужную сессию и отправить туда
-                    sendMessageToController(action.getMac(), wsTextMessage.makeMessage());
+                    User user = controllerService.findControllerOwner(action.getMac());
+                    if (user != null && user.equals(wsSession.getUser())) {
+                        logger.info("Sending message {} to controller {}", action.getAction(), action.getMac());
+                        sendMessageToController(action.getMac(), wsTextMessage.makeMessage());
+                    } else {
+                        logger.error("Action message to {} with incorrect owner {}", action.getMac(), wsSession.getUser().getId());
+                    }
                 }
                 break;
 
@@ -270,15 +264,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     RCUpdateOutput rcUpdateOutput = objectMapper.readValue(json, RCUpdateOutput.class);
                     // обновление только в БД, конфиг потом руками на контроллер, пока только для relaycontroller
-                    if (rcUpdateOutput.getUuid() != null) {
-                        String res = relayControllerService.updateOutput(rcUpdateOutput);
-                        if ("OK".equalsIgnoreCase(res))
-                            wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
-                        else
-                            wsSession.sendMessage(new TextMessage(errorMessage(res)));
-                    } else {
-                        wsSession.sendMessage(new TextMessage(errorMessage("No uuid present")));
-                    }
+                    String res = relayControllerService.updateOutput(rcUpdateOutput);
+                    if ("OK".equalsIgnoreCase(res))
+                        wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                    else
+                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
                 }
                 break;
 
@@ -287,15 +277,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     // пока только для relaycontroller
                     RCUpdateInput rcUpdateInput = objectMapper.readValue(json, RCUpdateInput.class);
-                    if (rcUpdateInput.getUuid() != null) {
-                        String res = relayControllerService.updateInput(rcUpdateInput);
-                        if ("OK".equalsIgnoreCase(res))
-                            wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
-                        else
-                            wsSession.sendMessage(new TextMessage(errorMessage(res)));
-                    } else {
-                        wsSession.sendMessage(new TextMessage(errorMessage("No uuid present")));
-                    }
+                    String res = relayControllerService.updateInput(rcUpdateInput);
+                    if ("OK".equalsIgnoreCase(res))
+                        wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                    else
+                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
                 }
                 break;
 
@@ -364,30 +350,30 @@ public class WebSocketHandler extends TextWebSocketHandler {
 //                }
 //                break;
 
-            case "MODBUSREQUEST":
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    try {
-                        RCModbusRequest rcModbusRequest = objectMapper.readValue(json, RCModbusRequest.class);
-                        if (rcModbusRequest.getSlaveUUID() != null) {
-                            logger.info("MODBUSREQUEST" + rcModbusRequest.getSlaveId());
-                            String res = relayControllerService.setSlave(wsSession.getUser(), rcModbusRequest.getSlaveUUID(), rcModbusRequest.getMasterUUID(), rcModbusRequest.getSlaveId());
-                            if (!"OK".equalsIgnoreCase(res)) {
-                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
-                            }
-                        }
-                    } catch (Exception e) {
-                        wsSession.sendMessage(new TextMessage(errorMessage(e.getLocalizedMessage())));
-                    }
-                }
-                break;
+//            case "MODBUSREQUEST":
+//                if ("web".equalsIgnoreCase(wsSession.getType())) {
+//                    try {
+//                        RCModbusRequest rcModbusRequest = objectMapper.readValue(json, RCModbusRequest.class);
+//                        if (rcModbusRequest.getSlaveUUID() != null) {
+//                            logger.info("MODBUSREQUEST" + rcModbusRequest.getSlaveId());
+//                            String res = relayControllerService.setSlave(wsSession.getUser(), rcModbusRequest.getSlaveUUID(), rcModbusRequest.getMasterUUID(), rcModbusRequest.getSlaveId());
+//                            if (!"OK".equalsIgnoreCase(res)) {
+//                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
+//                            }
+//                        }
+//                    } catch (Exception e) {
+//                        wsSession.sendMessage(new TextMessage(errorMessage(e.getLocalizedMessage())));
+//                    }
+//                }
+//                break;
 
-            case "TEST":
-                // команда отправки конфига на контроллер
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    Controller controller = objectMapper.readValue(json, Controller.class);
-
-                }
-                break;
+//            case "TEST":
+//                // команда отправки конфига на контроллер
+//                if ("web".equalsIgnoreCase(wsSession.getType())) {
+//                    Controller controller = objectMapper.readValue(json, Controller.class);
+//
+//                }
+//                break;
 
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
