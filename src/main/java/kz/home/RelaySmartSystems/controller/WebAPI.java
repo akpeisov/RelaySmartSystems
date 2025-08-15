@@ -1,16 +1,13 @@
 package kz.home.RelaySmartSystems.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.Controller;
 import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.UserDevices;
 import kz.home.RelaySmartSystems.model.WSSession;
 import kz.home.RelaySmartSystems.model.def.CRequest;
 import kz.home.RelaySmartSystems.model.def.CResponse;
 import kz.home.RelaySmartSystems.model.dto.WSSessionDTO;
 import kz.home.RelaySmartSystems.model.mapper.RelayControllerMapper;
-import kz.home.RelaySmartSystems.model.relaycontroller.RCInput;
-import kz.home.RelaySmartSystems.model.relaycontroller.RCUpdateInput;
+import kz.home.RelaySmartSystems.model.dto.RCUpdateInput;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import kz.home.RelaySmartSystems.repository.UniControllerRepository;
@@ -20,16 +17,13 @@ import kz.home.RelaySmartSystems.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController

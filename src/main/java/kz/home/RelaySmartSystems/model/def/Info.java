@@ -17,9 +17,5 @@ public class Info {
     private String ethIP;
     private String wifiIP;
     private String mac;
-
-//    public String getJson() throws JsonProcessingException {
-//        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-//        return ow.writeValueAsString(this);
-//    }
+    private String model;
 }

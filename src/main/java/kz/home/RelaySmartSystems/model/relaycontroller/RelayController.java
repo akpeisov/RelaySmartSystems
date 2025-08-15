@@ -31,17 +31,17 @@ public class RelayController extends Controller {
     @OrderBy("id ASC")
     private Set<RCInput> inputs;
 
-    @OneToMany(mappedBy = "master", cascade = CascadeType.ALL)
-    private List<RCModbus> slaves;
-
-    @OneToOne(mappedBy = "slave")
-    private RCModbus slaveOf;
-
-    public boolean isMaster() {
-        return slaves != null && !slaves.isEmpty();
-    }
-
-    public boolean isSlave() {
-        return slaveOf != null;
-    }
+//    @OneToMany(mappedBy = "master", cascade = CascadeType.ALL)
+//    private List<RCModbus> slaves;
+//
+//    @OneToOne(mappedBy = "slave")
+//    private RCModbus slaveOf;
+//
+//    public boolean isMaster() {
+//        return slaves != null && !slaves.isEmpty();
+//    }
+//
+//    public boolean isSlave() {
+//        return slaveOf != null;
+//    }
 }

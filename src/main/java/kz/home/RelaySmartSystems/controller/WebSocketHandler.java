@@ -8,12 +8,11 @@ import kz.home.RelaySmartSystems.filters.IpHandshakeInterceptor;
 import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.def.*;
-import kz.home.RelaySmartSystems.model.dto.RelayControllerDTO;
+import kz.home.RelaySmartSystems.model.dto.*;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
-import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,13 +23,11 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 
-// класс для контроллеров
-@Component // иначе из конфигурации не привяжется класс
+@Component
 public class WebSocketHandler extends TextWebSocketHandler {
     private static final ArrayList<WSSession> wsSessions = new ArrayList<>();
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHandler.class);
@@ -59,7 +56,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
         if (wsSession == null) {
             logger.error("wsSession not found!");
-            //session.sendMessage(new TextMessage(AlertMessage.makeAlert("WS session not found")));
             session.close();
             return;
         }
@@ -89,7 +85,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
         if (!wsSession.isAuthorized() && !type.equals("HELLO") && !type.equals("DEVICECONFIG")) {
             session.sendMessage(new TextMessage(errorMessage("Good bye!")));
-            session.close();
+            session.close(CloseStatus.TLS_HANDSHAKE_FAILURE); // :)
             return;
         }
 
@@ -157,17 +153,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // получение конфига от контроллера
                 // вызывается если это новый контроллер
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
-                    //User user = controllerService.getUserByController(wsSession.getControllerId());
-                    // TODO : to DTO
                     RelayControllerDTO relayControllerDTO = objectMapper.readValue(json, RelayControllerDTO.class);
                     relayControllerDTO.setMac(wsSession.getControllerId());
                     relayControllerService.saveRelayController(relayControllerDTO);
-
-//                    RelayController relayController = objectMapper.readValue(json, RelayController.class);
-//                    relayController.setMac(wsSession.getControllerId());
-//                    relayControllerService.addRelayController(relayController, null);
                     wsSession.setAuthorized(true);
-                    //session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
                     wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
                 } else {
                     session.sendMessage(new TextMessage(errorMessage("Unknown type")));
@@ -318,6 +307,18 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         wsSession.setObj(null);
                     } else {
                         wsSession.sendMessage(new TextMessage(errorMessage("Controller not found")));
+                    }
+                }
+                break;
+
+            case "MODBUSSETCONFIG":
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    RCModbusInfoDTO mbDto = objectMapper.readValue(json, RCModbusInfoDTO.class);
+                    String res = relayControllerService.saveMasterModbusConfig(mbDto);
+                    if ("OK".equalsIgnoreCase(res)) {
+                        wsSession.sendMessage(new TextMessage(successMessage("Test ok")));
+                    } else {
+                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
                     }
                 }
                 break;

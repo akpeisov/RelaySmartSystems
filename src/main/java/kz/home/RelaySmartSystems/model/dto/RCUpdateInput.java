@@ -1,8 +1,8 @@
-package kz.home.RelaySmartSystems.model.relaycontroller;
+package kz.home.RelaySmartSystems.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import kz.home.RelaySmartSystems.model.relaycontroller.RCEvent;
 import lombok.Getter;
 import lombok.Setter;
 

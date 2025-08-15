@@ -40,13 +40,9 @@ public class Controller {
     private String wifiIP;
     private Integer wifiRSSI;
     private long configTime;
+    private String model;
     @LastModifiedDate
     private Date lastSeen;
-//    @Transient
-//    private Object controllerData;
-
-    @Transient
-    private boolean linked;
 
     @PrePersist
     void firstDate() {

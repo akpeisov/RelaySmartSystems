@@ -94,6 +94,7 @@ public class ControllerService {
                 c.setName(info.getName());
                 c.setDescription(info.getDescription());
                 c.setWifiRSSI(info.getWifiRSSI());
+                c.setModel(info.getModel());
                 c.setStatus("online");
                 controllerRepository.save(c);
             }

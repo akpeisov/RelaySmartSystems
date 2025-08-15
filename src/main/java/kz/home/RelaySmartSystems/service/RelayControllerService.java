@@ -3,6 +3,9 @@ package kz.home.RelaySmartSystems.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.dto.RCModbusInfoDTO;
+import kz.home.RelaySmartSystems.model.dto.RCUpdateInput;
+import kz.home.RelaySmartSystems.model.dto.RCUpdateOutput;
 import kz.home.RelaySmartSystems.model.dto.RelayControllerDTO;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.*;
@@ -22,6 +25,8 @@ import org.apache.commons.beanutils.BeanUtils;
 
 import kz.home.RelaySmartSystems.Utils;
 
+import javax.transaction.Transactional;
+
 @Service
 public class RelayControllerService {
     private final RelayControllerRepository relayControllerRepository;
@@ -30,7 +35,8 @@ public class RelayControllerService {
     private final RCEventRepository rcEventRepository;
     private final RCActionRepository rcActionRepository;
     private final RCAclRepository rcAclRepository;
-    private final RCModbusRepository rcModbusRepository;
+    //private final RCModbusRepository rcModbusRepository;
+    private final RCModbusConfigRepository rcModbusConfigRepository;
     private final ControllerService controllerService;
     private static final Logger logger = LoggerFactory.getLogger(RelayControllerService.class);
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
@@ -39,7 +45,8 @@ public class RelayControllerService {
                                   RCEventRepository rcEventRepository,
                                   RCActionRepository rcActionRepository,
                                   RCAclRepository rcAclRepository,
-                                  RCModbusRepository rcModbusRepository,
+                                  //RCModbusRepository rcModbusRepository,
+                                  RCModbusConfigRepository rcModbusConfigRepository,
                                   ControllerService controllerService) {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
@@ -47,7 +54,8 @@ public class RelayControllerService {
         this.rcEventRepository = rcEventRepository;
         this.rcActionRepository = rcActionRepository;
         this.rcAclRepository = rcAclRepository;
-        this.rcModbusRepository = rcModbusRepository;
+        //this.rcModbusRepository = rcModbusRepository;
+        this.rcModbusConfigRepository = rcModbusConfigRepository;
         this.controllerService = controllerService;
     }
 
@@ -129,7 +137,9 @@ public class RelayControllerService {
     }
 
     public void updateRelayControllerIOStates(RelayController relayController) {
-//        RelayController newRelayController = new RelayController();
+// TODO: вызывает ошибку. Разобраться!
+        if (1==1)return;
+        //        RelayController newRelayController = new RelayController();
         // найти существующий контроллер
         String mac = relayController.getMac();
         RelayController existingRelayController = relayControllerRepository.findByMac(mac);
@@ -195,7 +205,54 @@ public class RelayControllerService {
     public void saveRelayController(RelayControllerDTO relayControllerDTO) {
         ModelMapper modelMapper = new ModelMapper();
         RelayController relayController = modelMapper.map(relayControllerDTO, RelayController.class);
+
+        // Проставляем обратные связи
+        if (relayController.getInputs() != null) {
+            for (RCInput input : relayController.getInputs()) {
+                input.setRelayController(relayController);
+
+                if (input.getEvents() != null) {
+                    for (RCEvent event : input.getEvents()) {
+                        event.setInput(input);
+
+                        if (event.getActions() != null) {
+                            for (RCAction action : event.getActions()) {
+                                action.setEvent(event);
+                            }
+                        }
+
+                        if (event.getAcls() != null) {
+                            for (RCAcl acl : event.getAcls()) {
+                                acl.setEvent(event);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (relayController.getOutputs() != null) {
+            relayController.getOutputs().forEach(output -> output.setRelayController(relayController));
+        }
+
         relayControllerRepository.save(relayController);
+
+        // modbus config
+        if (relayControllerDTO.getModbus() != null) {
+            RCModbusConfig rcModbusConfig = new RCModbusConfig();
+            rcModbusConfig.setController(relayController);
+            rcModbusConfig.setMode(ModbusMode.valueOf(relayControllerDTO.getModbus().getMode()));
+
+            // if it master
+            if (relayControllerDTO.getModbus().getMode().equalsIgnoreCase("master")) {
+                rcModbusConfig.setMaxRetries(relayControllerDTO.getModbus().getMaxRetries());
+                rcModbusConfig.setPollingTime(relayControllerDTO.getModbus().getPollingTime());
+                rcModbusConfig.setReadTimeout(relayControllerDTO.getModbus().getReadTimeout());
+            } else {
+                rcModbusConfig.setSlaveId(relayControllerDTO.getModbus().getSlaveId());
+            }
+            rcModbusConfigRepository.save(rcModbusConfig);
+        }
     }
 
     public String makeDeviceConfig(String mac) {
@@ -599,31 +656,102 @@ public class RelayControllerService {
 
 
 
-    public String setSlave(User user, UUID slave, UUID master, Integer slaveId) {
-        //Optional<RCModbus> optionalRCModbus = rcModbusRepository.findById(slave);
-        // TODO : проверить что и слейв и мастер принадлежат пользователю
-        // проверить что нет циклической связи
-        // проверить что slaveId > 0 и < 250
-        if (slaveId < 1 || slaveId > 250) {
-            return "SlaveId must be in 1..250";
-        }
-        if (!controllerService.isControllerBelongs(slave, user)) {
-            return "Controller belongs to another user";
-        }
-//        try {
-//            RCModbus rcModbus = rcModbusRepository.findBySlaveUUID(slave);
-//            if (rcModbus == null) {
-//                rcModbus = new RCModbus();
-////                rcModbus.setSlaveUUID(slave);
-//            }
-////            rcModbus.setMasterUUID(master);
-//            rcModbus.setSlaveId(slaveId);
-//            rcModbusRepository.save(rcModbus);
-//        } catch (Exception e) {
-//            return e.getLocalizedMessage();
+//    public String setSlave(User user, UUID slave, UUID master, Integer slaveId) {
+//        //Optional<RCModbus> optionalRCModbus = rcModbusRepository.findById(slave);
+//        // TODO : проверить что и слейв и мастер принадлежат пользователю
+//        // проверить что нет циклической связи
+//        // проверить что slaveId > 0 и < 250
+//        if (slaveId < 1 || slaveId > 250) {
+//            return "SlaveId must be in 1..250";
 //        }
+//        if (!controllerService.isControllerBelongs(slave, user)) {
+//            return "Controller belongs to another user";
+//        }
+////        try {
+////            RCModbus rcModbus = rcModbusRepository.findBySlaveUUID(slave);
+////            if (rcModbus == null) {
+////                rcModbus = new RCModbus();
+//////                rcModbus.setSlaveUUID(slave);
+////            }
+//////            rcModbus.setMasterUUID(master);
+////            rcModbus.setSlaveId(slaveId);
+////            rcModbusRepository.save(rcModbus);
+////        } catch (Exception e) {
+////            return e.getLocalizedMessage();
+////        }
+//        return "OK";
+//    }
+
+
+    @Transactional
+    public String saveMasterModbusConfig(RCModbusInfoDTO dto) {
+        UUID masterId = dto.getMaster();
+
+//        RelayController master = relayControllerRepository.findById(masterId)
+//                .orElse(null);
+//        if (master == null)
+//            return "Master controller not found";
+//
+//        // 1. Удалить старые связи
+//        List<RCModbus> oldLinks = rcModbusRepository.findAllByMaster(master);
+//        rcModbusRepository.deleteAll(oldLinks);
+//
+//        // 2. Обновить или создать RCModbusConfig
+//        RCModbusConfig config = rcModbusConfigRepository.findByController(master)
+//                .orElse(new RCModbusConfig());
+//        config.setController(master);
+//        config.setMode(ModbusMode.master);
+//        config.setPollingTime(dto.getPollingTime());
+//        config.setReadTimeout(dto.getReadTimeout());
+//        config.setMaxRetries(dto.getMaxRetries());
+//        config = rcModbusConfigRepository.save(config);
+//
+//        // 3. Привязать новых слейвов
+//        for (RCModbusInfoDTO.SlaveDTO slaveDTO : dto.getSlaves()) {
+//            RelayController slave = relayControllerRepository.findById(slaveDTO.getUuid())
+//                    .orElse(null);
+//            if (slave == null)
+//                return "Slave not found: " + slaveDTO.getUuid();
+//
+//            RCModbus modbus = new RCModbus();
+//            modbus.setMaster(master);
+//            modbus.setSlave(slave);
+//            modbus.setSlaveId(slaveDTO.getSlaveId());
+//            rcModbusRepository.save(modbus);
+//        }
+
         return "OK";
     }
+
+//    public RCModbusMasterConfigDTO getMasterModbusConfig(UUID masterId) {
+//        RelayController master = relayControllerRepository.findById(masterId)
+//                .orElseThrow(() -> new EntityNotFoundException("Master not found"));
+//
+//        RCModbusConfig config = rcModbusConfigRepository.findByController(master)
+//                .orElseThrow(() -> new EntityNotFoundException("Config not found for master"));
+//
+//        List<RCModbus> links = rcModbusRepository.findAllByMaster(master);
+//
+//        return getRcModbusMasterConfigDTO(master, config, links);
+//    }
+//
+//    private static RCModbusMasterConfigDTO getRcModbusMasterConfigDTO(RelayController master, RCModbusConfig config, List<RCModbus> links) {
+//        RCModbusMasterConfigDTO dto = new RCModbusMasterConfigDTO();
+//        dto.setMaster(master.getUuid());
+//        dto.setPollingTime(config.getPollingTime());
+//        dto.setReadTimeOut(config.getReadTimeout());
+//        dto.setMaxRetries(config.getMaxRetries());
+//
+//        List<RCModbusMasterConfigDTO.SlaveDTO> slaves = new ArrayList<>();
+//        for (RCModbus link : links) {
+//            RCModbusMasterConfigDTO.SlaveDTO slaveDTO = new RCModbusMasterConfigDTO.SlaveDTO();
+//            slaveDTO.setUuid(link.getSlave().getUuid());
+//            slaveDTO.setSlaveId(link.getSlaveId());
+//            slaves.add(slaveDTO);
+//        }
+//        dto.setSlaves(slaves);
+//        return dto;
+//    }
 
 
 }
