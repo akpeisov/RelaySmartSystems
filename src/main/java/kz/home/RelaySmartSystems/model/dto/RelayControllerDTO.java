@@ -25,4 +25,6 @@ public class RelayControllerDTO {
     private List<RCInputDTO> inputs;
 
     private RCModbusInfoDTO modbus;
+
+    // TODO : network config, scheduler, mqtt etc.
 }
