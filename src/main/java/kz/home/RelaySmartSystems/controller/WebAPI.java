@@ -6,6 +6,7 @@ import kz.home.RelaySmartSystems.model.WSSession;
 import kz.home.RelaySmartSystems.model.def.CRequest;
 import kz.home.RelaySmartSystems.model.def.CResponse;
 import kz.home.RelaySmartSystems.model.dto.WSSessionDTO;
+import kz.home.RelaySmartSystems.model.mapper.RCConfigMapper;
 import kz.home.RelaySmartSystems.model.mapper.RelayControllerMapper;
 import kz.home.RelaySmartSystems.model.dto.RCUpdateInput;
 import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
@@ -39,12 +40,15 @@ public class WebAPI {
     private final WebSocketHandler webSocketHandler;
     private final RelayControllerService relayControllerService;
     private final RelayControllerMapper relayControllerMapper;
+    private final RCConfigMapper rcConfigMapper;
     public WebAPI(RelayControllerRepository relayControllerRepository,
                   UniControllerRepository uniControllerRepository,
                   UserService userService,
                   ControllerService controllerService,
                   WebSocketHandler webSocketHandler,
-                  RelayControllerService relayControllerService, RelayControllerMapper relayControllerMapper) {
+                  RelayControllerService relayControllerService,
+                  RelayControllerMapper relayControllerMapper,
+                  RCConfigMapper rcConfigMapper) {
         this.relayControllerRepository = relayControllerRepository;
         this.uniControllerRepository = uniControllerRepository;
         this.userService = userService;
@@ -52,6 +56,7 @@ public class WebAPI {
         this.webSocketHandler = webSocketHandler;
         this.relayControllerService = relayControllerService;
         this.relayControllerMapper = relayControllerMapper;
+        this.rcConfigMapper = rcConfigMapper;
     }
 
     @GetMapping("/userDevices")
@@ -71,16 +76,27 @@ public class WebAPI {
             }
         }
         // отдаем массив устройств
+//        List<Object> controllers = new ArrayList<>();
+//        List<Controller> userControllers = controllerService.getUserControllers(user);
+//        for (Controller controller : userControllers) {
+//            if ("relayController".equalsIgnoreCase(controller.getType()) && controller instanceof RelayController rc) {
+//                //controllers.add(relayControllerRepository.findById(controller.getUuid()));
+//                controllers.add(relayControllerMapper.toDto(rc));
+//            } else if ("uniController".equalsIgnoreCase(controller.getType())) {
+//                controllers.add(uniControllerRepository.findById(controller.getUuid()));
+//            }
+//        }
+
         List<Object> controllers = new ArrayList<>();
         List<Controller> userControllers = controllerService.getUserControllers(user);
         for (Controller controller : userControllers) {
             if ("relayController".equalsIgnoreCase(controller.getType()) && controller instanceof RelayController rc) {
-                //controllers.add(relayControllerRepository.findById(controller.getUuid()));
-                controllers.add(relayControllerMapper.toDto(rc));
+                controllers.add(rcConfigMapper.RCtoDto(rc));
             } else if ("uniController".equalsIgnoreCase(controller.getType())) {
                 controllers.add(uniControllerRepository.findById(controller.getUuid()));
             }
         }
+
 //        UserDevices userDevices = new UserDevices();
 //        userDevices.setUsername(username);
 //        userDevices.setUserfio(user.getFio());

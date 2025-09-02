@@ -18,7 +18,7 @@ public class RCModbusConfig {
 
     @OneToOne
     @JoinColumn(name = "controller_uuid", unique = true)
-    private RelayController controller;
+    private RelayController controller; // ссылка на контроллер, не важно мастер это или слейв
 
     @Enumerated(EnumType.STRING)
     private ModbusMode mode;
@@ -27,8 +27,10 @@ public class RCModbusConfig {
     private Integer pollingTime;
     private Integer readTimeout;
     private Integer maxRetries;
+    private Boolean actionOnSameSlave;
 
     // Только для слейва
     private Integer slaveId;
-    private UUID master;
+    private String master;
+    private UUID masterUUID;
 }

@@ -2,11 +2,12 @@ package kz.home.RelaySmartSystems.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kz.home.RelaySmartSystems.model.NetworkConfig;
 import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.dto.RCModbusInfoDTO;
-import kz.home.RelaySmartSystems.model.dto.RCUpdateInput;
-import kz.home.RelaySmartSystems.model.dto.RCUpdateOutput;
-import kz.home.RelaySmartSystems.model.dto.RelayControllerDTO;
+import kz.home.RelaySmartSystems.model.dto.*;
+import kz.home.RelaySmartSystems.model.mapper.NetworkConfigMapper;
+import kz.home.RelaySmartSystems.model.mapper.RCConfigMapper;
+import kz.home.RelaySmartSystems.model.mapper.RelayControllerMapper;
 import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.*;
 import org.modelmapper.ModelMapper;
@@ -15,13 +16,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
-import java.time.Instant;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import org.apache.commons.beanutils.BeanUtils;
 
 import kz.home.RelaySmartSystems.Utils;
 
@@ -35,9 +33,12 @@ public class RelayControllerService {
     private final RCEventRepository rcEventRepository;
     private final RCActionRepository rcActionRepository;
     private final RCAclRepository rcAclRepository;
-    //private final RCModbusRepository rcModbusRepository;
     private final RCModbusConfigRepository rcModbusConfigRepository;
-    private final ControllerService controllerService;
+    //private final ControllerService controllerService;
+    private final RelayControllerMapper relayControllerMapper;
+    private final NetworkConfigMapper networkConfigMapper;
+    private final NetworkConfigRepository networkConfigRepository;
+    private final RCConfigMapper rcConfigMapper;
     private static final Logger logger = LoggerFactory.getLogger(RelayControllerService.class);
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
                                   RCOutputRepository outputRepository,
@@ -45,21 +46,29 @@ public class RelayControllerService {
                                   RCEventRepository rcEventRepository,
                                   RCActionRepository rcActionRepository,
                                   RCAclRepository rcAclRepository,
-                                  //RCModbusRepository rcModbusRepository,
                                   RCModbusConfigRepository rcModbusConfigRepository,
-                                  ControllerService controllerService) {
+                                  ControllerService controllerService,
+                                  RelayControllerMapper relayControllerMapper,
+                                  NetworkConfigMapper networkConfigMapper,
+                                  NetworkConfigRepository networkConfigRepository,
+                                  RCConfigMapper rcConfigMapper) {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
         this.inputRepository = inputRepository;
         this.rcEventRepository = rcEventRepository;
         this.rcActionRepository = rcActionRepository;
         this.rcAclRepository = rcAclRepository;
-        //this.rcModbusRepository = rcModbusRepository;
         this.rcModbusConfigRepository = rcModbusConfigRepository;
-        this.controllerService = controllerService;
+        //this.controllerService = controllerService;
+        this.relayControllerMapper = relayControllerMapper;
+        this.networkConfigMapper = networkConfigMapper;
+        this.networkConfigRepository = networkConfigRepository;
+        this.rcConfigMapper = rcConfigMapper;
     }
 
     public RelayController addRelayController(RelayController relayController, User user) {
+        // TODO : remove it
+        /*
         RelayController newRelayController = new RelayController();
         try {
             // найти существующий контроллер
@@ -134,6 +143,9 @@ public class RelayControllerService {
             throw new RuntimeException(e);
         }
         return relayControllerRepository.save(newRelayController);
+
+         */
+        return null;
     }
 
     public void updateRelayControllerIOStates(RelayController relayController) {
@@ -202,57 +214,68 @@ public class RelayControllerService {
         }
     }
 
-    public void saveRelayController(RelayControllerDTO relayControllerDTO) {
-        ModelMapper modelMapper = new ModelMapper();
-        RelayController relayController = modelMapper.map(relayControllerDTO, RelayController.class);
-
-        // Проставляем обратные связи
-        if (relayController.getInputs() != null) {
-            for (RCInput input : relayController.getInputs()) {
-                input.setRelayController(relayController);
-
-                if (input.getEvents() != null) {
-                    for (RCEvent event : input.getEvents()) {
-                        event.setInput(input);
-
-                        if (event.getActions() != null) {
-                            for (RCAction action : event.getActions()) {
-                                action.setEvent(event);
-                            }
-                        }
-
-                        if (event.getAcls() != null) {
-                            for (RCAcl acl : event.getAcls()) {
-                                acl.setEvent(event);
-                            }
-                        }
-                    }
-                }
-            }
+    public void saveRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
+        // отдельно смапить каждую сущность и сохранить/обновить
+        // find existing RC
+        String mac = rcConfigDTO.getMac();
+        if (mac == null) {
+            logger.error("saveRelayController. Mac is null");
+            return;
+        }
+        RelayController existingRelayController = relayControllerRepository.findByMac(mac);
+        if (existingRelayController != null) {
+            // rc found. delete it
+            logger.info("found existed relaycontroller. deleting it");
+            relayControllerRepository.delete(existingRelayController);
         }
 
-        if (relayController.getOutputs() != null) {
-            relayController.getOutputs().forEach(output -> output.setRelayController(relayController));
-        }
-
+        RelayController relayController = rcConfigMapper.toEntityRC(rcConfigDTO);
         relayControllerRepository.save(relayController);
 
-        // modbus config
-        if (relayControllerDTO.getModbus() != null) {
+        // modbus
+        if (rcConfigDTO.getModbus() != null) {
             RCModbusConfig rcModbusConfig = new RCModbusConfig();
             rcModbusConfig.setController(relayController);
-            rcModbusConfig.setMode(ModbusMode.valueOf(relayControllerDTO.getModbus().getMode()));
-
-            // if it master
-            if (relayControllerDTO.getModbus().getMode().equalsIgnoreCase("master")) {
-                rcModbusConfig.setMaxRetries(relayControllerDTO.getModbus().getMaxRetries());
-                rcModbusConfig.setPollingTime(relayControllerDTO.getModbus().getPollingTime());
-                rcModbusConfig.setReadTimeout(relayControllerDTO.getModbus().getReadTimeout());
-            } else {
-                rcModbusConfig.setSlaveId(relayControllerDTO.getModbus().getSlaveId());
+            RCModbusConfigDTO rcModbusInfoDTO = rcConfigDTO.getModbus();
+            if ("master".equalsIgnoreCase(rcModbusInfoDTO.getMode())) {
+                rcModbusConfig.setMode(ModbusMode.master);
+                rcModbusConfig.setMaxRetries(rcModbusInfoDTO.getMaxRetries());
+                rcModbusConfig.setPollingTime(rcModbusInfoDTO.getPollingTime());
+                rcModbusConfig.setReadTimeout(rcModbusInfoDTO.getReadTimeout());
+                rcModbusConfig.setActionOnSameSlave(rcModbusInfoDTO.getActionOnSameSlave());
+                for (RCModbusConfigDTO.SlaveDTO slaveDTO : rcModbusInfoDTO.getSlaves()) {
+                    // Непонятно куда список слейвов сохранять. Можно и не сохранять вообще, а понимать кто слейвы наоборот по мастеру
+                    //RC
+                }
+            } else if ("slave".equalsIgnoreCase(rcModbusInfoDTO.getMode())) {
+                rcModbusConfig.setMode(ModbusMode.slave);
+                rcModbusConfig.setSlaveId(rcModbusInfoDTO.getSlaveId());
+                rcModbusConfig.setMaster(rcModbusInfoDTO.getMaster());
             }
+            //BeanUtils.copyProperties(rcModbusConfig, rcConfigDTO.getModbus());
+            rcModbusConfig.setController(relayController);
             rcModbusConfigRepository.save(rcModbusConfig);
         }
+
+        // network
+        NetworkConfig networkConfig = networkConfigMapper.fromDto(rcConfigDTO.getNetwork());
+        networkConfig.setController(relayController);
+        networkConfigRepository.save(networkConfig);
+
+        // scheduler
+        // TODO : implement it
+
+    }
+
+    public String getDeviceConfig(String mac) {
+        String json = "{}";
+        RelayController controller = relayControllerRepository.findByMac(mac.toUpperCase());
+        if (controller != null) {
+//            ModelMapper modelMapper = new ModelMapper();
+//            RCConfigDTO rcConfigDTO = modelMapper.map(controller, RelayControllerDTO.class);
+
+        }
+        return json;
     }
 
     public String makeDeviceConfig(String mac) {
@@ -346,8 +369,10 @@ public class RelayControllerService {
                     rcInput.setType(rcUpdateInput.getType());
 
                 // Обработка событий
-                Set<RCEvent> existingEvents = rcInput.getEvents();
-                Set<RCEvent> eventsToUpdate = new HashSet<>();
+                //Set<RCEvent> existingEvents = rcInput.getEvents();
+                List<RCEvent> existingEvents = rcInput.getEvents();
+                //Set<RCEvent> eventsToUpdate = new HashSet<>();
+                List<RCEvent> eventsToUpdate = new ArrayList<>();
 
                 // идем по событиям из запроса
                 for (RCEvent eventRequest : rcUpdateInput.getEvents()) {
@@ -684,8 +709,8 @@ public class RelayControllerService {
 
 
     @Transactional
-    public String saveMasterModbusConfig(RCModbusInfoDTO dto) {
-        UUID masterId = dto.getMaster();
+    public String saveMasterModbusConfig(RCModbusConfigDTO dto) {
+        //UUID masterId = dto.getMaster();
 
 //        RelayController master = relayControllerRepository.findById(masterId)
 //                .orElse(null);

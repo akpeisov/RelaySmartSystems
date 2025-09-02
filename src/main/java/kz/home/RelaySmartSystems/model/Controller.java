@@ -3,7 +3,6 @@ package kz.home.RelaySmartSystems.model;
 import com.fasterxml.jackson.annotation.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.validator.constraints.UniqueElements;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -43,6 +42,9 @@ public class Controller {
     private String model;
     @LastModifiedDate
     private Date lastSeen;
+
+    @OneToOne(mappedBy = "controller", cascade = CascadeType.ALL, orphanRemoval = true)
+    private NetworkConfig networkConfig;
 
     @PrePersist
     void firstDate() {

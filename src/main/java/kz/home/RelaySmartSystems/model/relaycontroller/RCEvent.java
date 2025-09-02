@@ -36,4 +36,10 @@ public class RCEvent {
     @JoinColumn(name = "input_uuid", nullable=false)
     @ManyToOne(optional = false)
     private RCInput input;
+
+    public RCEvent(String event, Set<RCAction> actions, Set<RCAcl> acls) {
+        this.event = event;
+        this.actions = actions;
+        this.acls = acls;
+    }
 }

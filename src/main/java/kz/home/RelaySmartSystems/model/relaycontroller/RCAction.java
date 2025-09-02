@@ -31,14 +31,22 @@ public class RCAction {
     @ManyToOne(optional = false)
     private RCEvent event;
 
-    @Transient
-    private String outputID;
+//    @Transient
+//    private String outputID;
 
     public String getOutputID() {
         return String.format("s%do%d", this.slaveId, this.output);
     }
 
-//    public String getCompareId() {
+    public RCAction(Integer order, Integer output, String action, Integer duration, Integer slaveId) {
+        this.order = order;
+        this.output = output;
+        this.action = action;
+        this.duration = duration;
+        this.slaveId = slaveId;
+    }
+
+    //    public String getCompareId() {
 //        return String.format("%s%d%s%d", event, output, action, slaveId);
 //    }
 }

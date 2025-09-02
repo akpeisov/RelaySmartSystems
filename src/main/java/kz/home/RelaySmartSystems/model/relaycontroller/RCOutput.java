@@ -38,10 +38,10 @@ public class RCOutput {
     @JoinColumn(name = "relay_controller_uuid", nullable=false)
     private RelayController relayController;
 
-    @Transient
-    private String outputID;
-
-    public String getOutputID() {
-        return String.format("s%do%d", this.slaveId, this.id);
-    }
+//    @Transient
+//    private String outputID;
+//
+//    public String getOutputID() {
+//        return String.format("s%do%d", this.slaveId, this.id);
+//    }
 }

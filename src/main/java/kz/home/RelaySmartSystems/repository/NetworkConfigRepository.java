@@ -1,0 +1,9 @@
+package kz.home.RelaySmartSystems.repository;
+
+import kz.home.RelaySmartSystems.model.NetworkConfig;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.UUID;
+
+public interface NetworkConfigRepository extends JpaRepository<NetworkConfig, UUID> {
+}

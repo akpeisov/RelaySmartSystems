@@ -110,6 +110,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // TODO : убрать после теста
                 if (hello.getType().equalsIgnoreCase("WEB1"))
                     wsSession.setType("WEB");
+                else if (hello.getType().equalsIgnoreCase("RC1"))
+                    wsSession.setType("relayController");
+
 
                 if (tokenData.getMac() != null) {
                     // Это контроллер
@@ -153,9 +156,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // получение конфига от контроллера
                 // вызывается если это новый контроллер
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
-                    RelayControllerDTO relayControllerDTO = objectMapper.readValue(json, RelayControllerDTO.class);
-                    relayControllerDTO.setMac(wsSession.getControllerId());
-                    relayControllerService.saveRelayController(relayControllerDTO);
+                    RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
+//                    RelayControllerDTO relayControllerDTO = objectMapper.readValue(json, RelayControllerDTO.class);
+//                    relayControllerDTO.setMac(wsSession.getControllerId());
+                    relayControllerService.saveRelayController(rcConfigDTO);
                     wsSession.setAuthorized(true);
                     wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
                 } else {
@@ -313,7 +317,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
             case "MODBUSSETCONFIG":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCModbusInfoDTO mbDto = objectMapper.readValue(json, RCModbusInfoDTO.class);
+                    RCModbusConfigDTO mbDto = objectMapper.readValue(json, RCModbusConfigDTO.class);
                     String res = relayControllerService.saveMasterModbusConfig(mbDto);
                     if ("OK".equalsIgnoreCase(res)) {
                         wsSession.sendMessage(new TextMessage(successMessage("Test ok")));

@@ -35,6 +35,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
                     //claims = Jwts.parser().unsecured().build().parseSignedClaims(token).getPayload();
                     tokenData.setUsername("user");
                     return tokenData;
+                } else if ("RC1".equalsIgnoreCase(type)) { // TODO : убрать после теста!!!
+                    tokenData.setMac(token);
+                    return tokenData;
                 } else {
                     claims = Jwts.parser().verifyWith(generateJwtKeyDecryption(publicKey))
                             .build()

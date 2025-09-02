@@ -6,120 +6,235 @@
 }
 
 
-{"type": "MODBUSREQUEST",
-"payload": {
-    "masterUUID": "6cd4fad0-263d-424a-a1f3-374f74f4fb14",
-    "slaveUUID": "b97fffe5-db3a-403d-a098-3404bc226c93",
-    "slaveId": 2
-}
-}
 
-JavaScript.
-
-Интерфейс представляет собой таблицу, состоящую из 3 строк.
-1 строка - входы (inputs у которых id <=15)
-2 строка - кнопки (inputs у которых id>15)
-3 строка - выходы (outputs)
-У входов и выходов иожно отобразить name в качестве значения и круглешок, залитый цвтом серым или зеленым в зависимости от state (on=green, off=gray)
-У кнопок отобразить просто значения name
-
-Количество входов, выходов и кнопок берется из конфигурационного файла (config.json)
-Выше таблицы отображается информация:
-mac, name, status, type
-
-При нажатии на ячейки у кнопок срабатывают события toggle (event=toggle). В конфигурацинном файле на каждое такое событие есть массив действий, 
-нужно найти соответствующее событие по id кнопки и сделать соответствующие действия с выходами 
-(on - включить выход, изменив состояние state на on,
-    off - выключить выход, изменив состояние state на off,
-    toggle - изменить текущее сосояние state выхода, если был on станет off и наоборот).
-
-При нажатии на ячейки у выходов необходимо изменить текущее сосояние (state) с on на off или наоборот.
-
-При нажатии на ячейки у входов необходимо изменить текущее сосояние (state) с on на off или наоборот.
-
-При открытии страницы осуществить подключение к websocket серверу по адресу из конфигурационного файла (поле ws)
-После подключения отправить сообщение 
-{"type": "HELLO",
-"payload": {"type": "WEB1","token": "123456"}}
-
-
-Далее при изменении состояния выходов (state) отправлять сообщение в вебсокет (подставив соответствующие значения)
-{"type": "UPDATE",
-"payload": {"mac": "123", "output": 7, "state": "on"}}
-
-Тоже самое при изменении состояния входов отправлять сообщение вида
-{"type": "UPDATE",
-"payload": {"mac": "123", "input": 2, "state": "on"}}
-
-Все входящие сообщения вебсокета нужно выводить в отдельное поле снизу, указывая дату и время получения сообщения.
-
-
-
-Пример конфигурационного файла
-{
-        "uuid": "6cd4fad0-263d-424a-a1f3-374f74f4fb14",
-        "mac": "12345678",
-        "type": "relayController",
+{"type": "DEVICECONFIG",
+    "payload": {
         "name": "master",
-        "type": "RCV2B",
-        "status": "offline",
-        "ws": "http://localhost:8888/ws",
-        "outputs": [
-            {
-            "id": 1,
-            "name": "out1",
-            "state": "on"
-            }
-        ],
-        "inputs": [
-            {
-                "id": 1,
-                "name": "in1",
-                "state": "on",
-                "events": [
-                    {
-                        "event": "toggle",
-                        "actions": [
-                            {
-                                "output": 1,
-                                "action": "toggle"
-                            }
-                        ]
-                    }
-                ]
+        "model": "RCV2B",
+        "mac": "N12345678",
+        "description": "test",
+        "modbus": {
+            "mode": "master",
+            "pollingTime": 100,
+            "readTimeout": 500,
+            "maxRetries": 3,
+            "actionOnSameSlave": false,
+            "slaves": [
+                {
+                    "slaveId": 1,
+                    "model": "RCV2B",
+                    "mac": "111"
+                },
+                {
+                    "slaveId": 2,
+                    "model": "RCV2S",
+                    "mac": "222"
+                }
+            ]
+        },
+        "network": {
+            "ntpServer": "pool.ntp.org",
+            "ntpTZ": "UTC-5:00",
+            "otaURL": "https://example.com/RelayController.bin",
+            "cloud": {
+              "address": "ws://example.com/ws",
+              "enabled": true
             },
-            {
-                "id": 2,
-                "name": "in2",
-                "state": "off",
-                "events": [
-                    {
-                        "event": "on",
-                        "actions": [
-                            {
-                                "output": 1,
-                                "action": "off",
-                                "slaveId": 2
-                            }
-                        ]
-                    }
-                ]
+            "eth": {
+              "enabled": true,
+              "dhcp": true,
+              "ip": "192.168.2.9",
+              "netmask": "255.255.255.0",
+              "gateway": "192.168.2.1",
+              "dns": "192.168.2.1",
+              "enableReset": true,
+              "resetGPIO": 5
             },
-            {
-                "id": 16,
-                "name": "btn1",                
-                "events": [
-                    {
-                        "event": "toggle",
-                        "actions": [
-                            {
-                                "output": 1,
-                                "action": "toggle",
-                                "slaveId": 2
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
+            "wifi": {
+              "enabled": true,
+              "dhcp": true,
+              "ip": "192.168.2.10",
+              "netmask": "255.255.255.0",
+              "gateway": "192.168.2.1",
+              "ssid": "devices",
+              "pass": "alanaDev1"
+            },
+            "ftp": {
+              "enabled": false,
+              "user": "admin",
+              "pass": "admin"
+            }        
+        },
+        "io": {
+            "outputs": [
+                {
+                    "id": 1,
+                    "name": "out1",
+                    "state": "on"
+                },
+                {
+                    "id": 2,
+                    "name": "out1",
+                    "state": "on",
+                    "slaveId": 1
+                },
+                {
+                    "id": 2,
+                    "name": "out1",
+                    "state": "on",
+                    "type": "INVSW"
+                }
+            ],
+            "inputs": [
+                {
+                    "id": 1,
+                    "name": "in1",
+                    "state": "on",
+                    "slaveId": 2,
+                    "events": [
+                        {
+                            "event": "toggle",
+                            "actions": [
+                                {
+                                    "output": 1,
+                                    "action": "toggle"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 2,
+                    "name": "in2",
+                    "state": "off",
+                    "events": [
+                        {
+                            "event": "on",
+                            "actions": [
+                                {
+                                    "output": 1,
+                                    "action": "off",
+                                    "slaveId": 2
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 16,
+                    "name": "btn1",                
+                    "events": [
+                        {
+                            "event": "toggle",
+                            "actions": [
+                                {
+                                    "output": 1,
+                                    "action": "toggle",
+                                    "slaveId": 2
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+
+}
+
+
+"modbus": {
+            "mode": "slave",
+            "slaveId": 1,
+            "master": "12345678"            
+        },
+
+
+{"type": "DEVICECONFIG",
+    "payload": {
+        "name": "slave",
+        "model": "RCV2S",
+        "mac": "N222333",
+        "description": "test slave",
+        "modbus": {
+            "mode": "slave",
+            "slaveId": 2,
+            "master": "N12345678"
+        },
+        "network": {
+            "eth": {
+                "dhcp": true
+            },
+            "wifi": {
+                "dhcp": true
+            },
+            "ntpserver": "test"
+        },
+        "io": {
+            "outputs": [
+                {
+                    "id": 1,
+                    "name": "out1",
+                    "state": "on"
+                },
+                {
+                    "id": 2,
+                    "name": "out2",
+                    "state": "on",
+                    "type": "INVSW"
+                }
+            ],
+            "inputs": [
+                {
+                    "id": 1,
+                    "name": "in1",
+                    "state": "on",
+                    "events": [
+                        {
+                            "event": "toggle",
+                            "actions": [
+                                {
+                                    "output": 1,
+                                    "action": "toggle"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 2,
+                    "name": "in2",
+                    "state": "off",
+                    "events": [
+                        {
+                            "event": "on",
+                            "actions": [
+                                {
+                                    "output": 1,
+                                    "action": "off",
+                                    "slaveId": 2
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 17,
+                    "name": "btn1",                
+                    "events": [
+                        {
+                            "event": "toggle",
+                            "actions": [
+                                {
+                                    "output": 1,
+                                    "action": "toggle"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+
 }

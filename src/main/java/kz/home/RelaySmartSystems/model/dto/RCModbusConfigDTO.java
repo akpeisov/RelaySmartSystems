@@ -1,29 +1,34 @@
 package kz.home.RelaySmartSystems.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
-import java.util.UUID;
 
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RCModbusInfoDTO {
+public class RCModbusConfigDTO {
     private String mode; // master | slave
+
+    // only for master
     private Integer pollingTime;
     private Integer readTimeout;
     private Integer maxRetries;
     private Boolean actionOnSameSlave;
     private List<SlaveDTO> slaves;
+
+    // only for slave
     private Integer slaveId;
-    private UUID master;
+    private String master;
 
     @Getter
     @Setter
     public static class SlaveDTO {
-        private UUID uuid;
+        //private UUID uuid;
         private String mac;
         private Integer slaveId;
         private String model;
