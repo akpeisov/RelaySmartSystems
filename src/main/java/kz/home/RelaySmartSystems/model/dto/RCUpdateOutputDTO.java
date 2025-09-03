@@ -12,7 +12,7 @@ import java.util.UUID;
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class RCUpdateOutput {
+public class RCUpdateOutputDTO {
     private UUID uuid;
     private String mac;
     private Integer id;

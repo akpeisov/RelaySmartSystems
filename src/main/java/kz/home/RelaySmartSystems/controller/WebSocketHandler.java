@@ -9,7 +9,6 @@ import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.def.*;
 import kz.home.RelaySmartSystems.model.dto.*;
-import kz.home.RelaySmartSystems.model.relaycontroller.*;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
@@ -157,8 +156,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // вызывается если это новый контроллер
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
-//                    RelayControllerDTO relayControllerDTO = objectMapper.readValue(json, RelayControllerDTO.class);
-//                    relayControllerDTO.setMac(wsSession.getControllerId());
                     relayControllerService.saveRelayController(rcConfigDTO);
                     wsSession.setAuthorized(true);
                     wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
@@ -182,9 +179,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "IOSTATES":
                 // Обновление состояния входов/выходов сразу всех. Используется при подключении контроллера
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
-                    RelayController relayController = objectMapper.readValue(json, RelayController.class);
-                    relayController.setMac(wsSession.getControllerId());
-                    relayControllerService.updateRelayControllerIOStates(relayController);
+                    RCUpdateIODTO rcUpdateIODTO = objectMapper.readValue(json, RCUpdateIODTO.class);
+                //                    RelayController relayController = objectMapper.readValue(json, RelayController.class);
+                    //relayController.setMac(wsSession.getControllerId());
+                    relayControllerService.updateRelayControllerIOStates(wsSession.getControllerId(), rcUpdateIODTO);
                 }
                 break;
 
@@ -193,7 +191,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 //            {"type":"UPDATE","payload":{"mac":"C8F09E311008","input":16,"state":"long"}}
                 // проверить линковку
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
-                    RCUpdate update = objectMapper.readValue(json, RCUpdate.class);
+                    RCUpdateDTO update = objectMapper.readValue(json, RCUpdateDTO.class);
                     if (update.getOutput() != null) {
                         relayControllerService.setOutputState(wsSession.getControllerId(), update.getOutput(), update.getState(), update.getSlaveId());
                     } else if (update.getInput() != null) {
@@ -209,7 +207,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                                 }
                             }
                         } else {
-                            relayControllerService.setInputState(wsSession.getControllerId(), update.getInput(), update.getState());
+                            relayControllerService.setInputState(wsSession.getControllerId(), update.getInput(), update.getState(), update.getSlaveId());
                         }
                     }
                     // отправить уведомление владельцу контроллера
@@ -255,9 +253,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "UPDATEOUTPUT":
                 // обновление выхода контроллера
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCUpdateOutput rcUpdateOutput = objectMapper.readValue(json, RCUpdateOutput.class);
+                    RCUpdateOutputDTO rcUpdateOutputDTO = objectMapper.readValue(json, RCUpdateOutputDTO.class);
                     // обновление только в БД, конфиг потом руками на контроллер, пока только для relaycontroller
-                    String res = relayControllerService.updateOutput(rcUpdateOutput);
+                    String res = relayControllerService.updateOutput(rcUpdateOutputDTO);
                     if ("OK".equalsIgnoreCase(res))
                         wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
                     else
@@ -269,8 +267,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // обновление входа контроллера
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     // пока только для relaycontroller
-                    RCUpdateInput rcUpdateInput = objectMapper.readValue(json, RCUpdateInput.class);
-                    String res = relayControllerService.updateInput(rcUpdateInput);
+                    RCUpdateInputDTO rcUpdateInputDTO = objectMapper.readValue(json, RCUpdateInputDTO.class);
+                    String res = relayControllerService.updateInput(rcUpdateInputDTO);
                     if ("OK".equalsIgnoreCase(res))
                         wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
                     else
@@ -314,71 +312,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     }
                 }
                 break;
-
-            case "MODBUSSETCONFIG":
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCModbusConfigDTO mbDto = objectMapper.readValue(json, RCModbusConfigDTO.class);
-                    String res = relayControllerService.saveMasterModbusConfig(mbDto);
-                    if ("OK".equalsIgnoreCase(res)) {
-                        wsSession.sendMessage(new TextMessage(successMessage("Test ok")));
-                    } else {
-                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
-                    }
-                }
-                break;
-
-//            case "UPLOADCONFIG":
-//                // команда отправки конфига на контроллер
-//                if ("web".equalsIgnoreCase(wsSession.getType())) {
-//                    Controller controller = objectMapper.readValue(json, Controller.class);
-//                    if ("test".equalsIgnoreCase(controller.getMac())) {
-//                        //session.sendMessage(new TextMessage("OK"));
-//                        //session.sendMessage(new TextMessage(errorMessage("Test")));
-//                        wsSession.sendMessage(new TextMessage(successMessage("Test")));
-//                    }
-//                    else if (controller.getMac() != null) {
-//                        if (isControllerOnline(controller.getMac())) {
-//                            // make config and send to controller
-//                            String res = sendMessageToController(controller.getMac(), relayControllerService.makeDeviceConfig(controller.getMac()));
-//                            //logger.info("len " +relayControllerService.makeDeviceConfig(controller.getMac()).getBytes().length);
-//                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\"}");
-//                            //String res = sendMessageToController(controller.getMac(), "{\"type\":\"INFO\", \"payload\": \"" +genTest(5500)+ "\"}");
-//
-//                            logger.info(String.format("sendMessageToController %s", res));
-//                            if (!"OK".equalsIgnoreCase(res)) {
-//                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
-//                            }
-//                        } else {
-//                            wsSession.sendMessage(new TextMessage(errorMessage("Controller offline")));
-//                        }
-//                    }
-//                }
-//                break;
-
-//            case "MODBUSREQUEST":
-//                if ("web".equalsIgnoreCase(wsSession.getType())) {
-//                    try {
-//                        RCModbusRequest rcModbusRequest = objectMapper.readValue(json, RCModbusRequest.class);
-//                        if (rcModbusRequest.getSlaveUUID() != null) {
-//                            logger.info("MODBUSREQUEST" + rcModbusRequest.getSlaveId());
-//                            String res = relayControllerService.setSlave(wsSession.getUser(), rcModbusRequest.getSlaveUUID(), rcModbusRequest.getMasterUUID(), rcModbusRequest.getSlaveId());
-//                            if (!"OK".equalsIgnoreCase(res)) {
-//                                wsSession.sendMessage(new TextMessage(errorMessage(res)));
-//                            }
-//                        }
-//                    } catch (Exception e) {
-//                        wsSession.sendMessage(new TextMessage(errorMessage(e.getLocalizedMessage())));
-//                    }
-//                }
-//                break;
-
-//            case "TEST":
-//                // команда отправки конфига на контроллер
-//                if ("web".equalsIgnoreCase(wsSession.getType())) {
-//                    Controller controller = objectMapper.readValue(json, Controller.class);
-//
-//                }
-//                break;
 
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {

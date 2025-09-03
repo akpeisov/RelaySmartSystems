@@ -7,13 +7,10 @@ import lombok.Setter;
 import javax.persistence.*;
 import java.util.UUID;
 
-@Entity
-@Table(name = "rc_outputs")
 @Setter
 @Getter
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
-//@JsonPropertyOrder({"id"}) // какое свойство в каком порядке будет внутри объекта, это не сортировка
+@Entity
+@Table(name = "rc_outputs")
 public class RCOutput {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -38,10 +35,7 @@ public class RCOutput {
     @JoinColumn(name = "relay_controller_uuid", nullable=false)
     private RelayController relayController;
 
-//    @Transient
-//    private String outputID;
-//
-//    public String getOutputID() {
-//        return String.format("s%do%d", this.slaveId, this.id);
-//    }
+    public Integer getSlaveId() {
+        return slaveId == null ? 0 : slaveId;
+    }
 }

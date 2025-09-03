@@ -28,4 +28,7 @@ public class RelayController extends Controller {
 
     @OneToOne(mappedBy = "controller", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private RCModbusConfig modbusConfig;
+
+    @OneToOne(mappedBy = "controller", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private RCScheduler scheduler;
 }

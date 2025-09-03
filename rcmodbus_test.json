@@ -32,6 +32,25 @@
                 }
             ]
         },
+        "scheduler": {
+            "enabled": true,
+            "tasks": [
+                {
+                    "name": "task1",
+                    "grace": 15,
+                    "time": 1000,
+                    "enabled": true,
+                    "dow": [1,2,5],
+                    "actions": [
+                        {
+                            "action": "on",
+                            "type": "out",
+                            "output": 2
+                        }
+                    ]
+                }
+            ]
+        }, 
         "network": {
             "ntpServer": "pool.ntp.org",
             "ntpTZ": "UTC-5:00",
@@ -237,4 +256,26 @@
         }
     }
 
+}
+
+{"type": "IOSTATES",
+    "payload": {
+        "outputs": [
+            {
+                "id": 1,
+                "state": "new1"
+            },
+            {
+                "id": 2,
+                "state": "new2",
+                "slaveId": 1
+            }
+        ],
+        "inputs": [
+            {
+                "id": 2,
+                "state": "new3"
+            }
+        ]    
+    }
 }

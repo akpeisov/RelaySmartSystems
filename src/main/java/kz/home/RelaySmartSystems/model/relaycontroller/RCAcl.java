@@ -26,13 +26,6 @@ public class RCAcl {
     @JoinColumn(name = "event_uuid", nullable=false)
     RCEvent event;
 
-    public RCAcl(String type, Integer id, String io, String state) {
-        this.type = type;
-        this.id = id;
-        this.io = io;
-        this.state = state;
-    }
-
     public String getCompareId() {
         return String.format("%d%s%s%s", id, type, io, state);
     }

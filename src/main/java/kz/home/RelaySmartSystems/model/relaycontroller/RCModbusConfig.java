@@ -11,7 +11,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "rc_modbus_config")
 public class RCModbusConfig {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;

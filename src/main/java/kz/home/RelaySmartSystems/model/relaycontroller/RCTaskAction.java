@@ -17,7 +17,6 @@ public class RCTaskAction {
     private UUID uuid;
 
     private String action;
-    private Integer duration;
     private Integer output;
     private String type;
     private Integer input;

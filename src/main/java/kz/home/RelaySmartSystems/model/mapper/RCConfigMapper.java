@@ -17,10 +17,13 @@ import java.util.Set;
 public class RCConfigMapper {
     private final RelayControllerMapper relayControllerMapper;
     private final RCModbusConfigRepository modbusConfigRepository;
+    private final RCSchedulerMapper rcSchedulerMapper;
     public RCConfigMapper(RelayControllerMapper relayControllerMapper,
-                          RCModbusConfigRepository modbusConfigRepository) {
+                          RCModbusConfigRepository modbusConfigRepository,
+                          RCSchedulerMapper rcSchedulerMapper) {
         this.relayControllerMapper = relayControllerMapper;
         this.modbusConfigRepository = modbusConfigRepository;
+        this.rcSchedulerMapper = rcSchedulerMapper;
     }
 
     private NetworkConfigDTO networkToDto(NetworkConfig networkConfig) {
@@ -74,77 +77,6 @@ public class RCConfigMapper {
         return wifiDto;
     }
 
-    public RelayController toEntityRC(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
-        RelayController relayController = new RelayController();
-
-        // general info
-        relayController.setMac(rcConfigDTO.getMac());
-        relayController.setName(rcConfigDTO.getName());
-        relayController.setDescription(rcConfigDTO.getDescription());
-        relayController.setModel(rcConfigDTO.getModel());
-        relayController.setType("relayController");
-
-        // outputs
-        List<RCOutput> outputs = new ArrayList<>();
-        for (RCOutputDTO outputDTO : rcConfigDTO.getIo().getOutputs()) {
-            RCOutput output = new RCOutput();
-            output.setRelayController(relayController);
-            BeanUtils.copyProperties(output, outputDTO);
-            outputs.add(output);
-        }
-        relayController.setOutputs(outputs);
-
-        // inputs
-        List<RCInput> inputs = new ArrayList<>();
-        for (RCInputDTO inputDTO : rcConfigDTO.getIo().getInputs()) {
-            RCInput input = new RCInput();
-            input.setRelayController(relayController);
-            //BeanUtils.copyProperties(input, inputDTO); // Cannot invoke kz.home.RelaySmartSystems.model.relaycontroller.RCInput.setEvents - argument type mismatch
-            input.setId(inputDTO.getId());
-            input.setName(inputDTO.getState());
-            input.setType(inputDTO.getType());
-            input.setState(inputDTO.getState());
-            input.setSlaveId(inputDTO.getSlaveId());
-
-            if (inputDTO.getEvents() != null) {
-                List<RCEvent> newEvents = new ArrayList<>();
-                for (RCEventDTO eventDTO : inputDTO.getEvents()) {
-                    RCEvent newEvent = new RCEvent();
-                    BeanUtils.copyProperties(newEvent, eventDTO);
-                    newEvent.setInput(input);
-                    // actions
-                    if (eventDTO.getActions() != null) {
-                        Set<RCAction> newActions = new HashSet<>();
-                        for (RCActionDTO action : eventDTO.getActions()) {
-                            RCAction newAction = new RCAction();
-                            BeanUtils.copyProperties(newAction, action);
-                            newAction.setEvent(newEvent);
-                            newActions.add(newAction);
-                        }
-                        newEvent.setActions(newActions);
-                    }
-                    // acls
-                    if (eventDTO.getAcls() != null) {
-                        Set<RCAcl> newAcls = new HashSet<>();
-                        for (RCAclDTO acl : eventDTO.getAcls()) {
-                            RCAcl newAcl = new RCAcl();
-                            BeanUtils.copyProperties(newAcl, acl);
-                            newAcl.setEvent(newEvent);
-                            newAcls.add(newAcl);
-                        }
-                        newEvent.setAcls(newAcls);
-                    }
-                    newEvents.add(newEvent);
-                }
-                input.setEvents(newEvents);
-            }
-            inputs.add(input);
-        }
-        relayController.setInputs(inputs);
-
-        return relayController;
-    }
-
     public RCConfigDTO RCtoDto(RelayController controller) {
         RCConfigDTO rcConfigDTO = new RCConfigDTO();
         // general info
@@ -174,7 +106,8 @@ public class RCConfigMapper {
         rcConfigDTO.setModbus(rcModbusInfoDTO);
         // network
         rcConfigDTO.setNetwork(networkToDto(controller.getNetworkConfig()));
-
+        // scheduler
+        rcConfigDTO.setScheduler(rcSchedulerMapper.toDto(controller.getScheduler()));
         return rcConfigDTO;
     }
 }

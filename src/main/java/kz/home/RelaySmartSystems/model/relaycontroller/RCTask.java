@@ -4,9 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Getter
 @Setter
@@ -29,6 +27,9 @@ public class RCTask {
     private Set<Integer> dow;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    private Set<RCTaskAction> actions = new HashSet<>();
+    private List<RCTaskAction> actions = new ArrayList<>();
 
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "scheduler_uuid", nullable=false)
+    private RCScheduler scheduler;
 }

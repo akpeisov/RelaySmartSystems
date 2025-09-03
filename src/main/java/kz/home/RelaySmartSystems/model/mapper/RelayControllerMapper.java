@@ -8,12 +8,12 @@ import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-//@RequiredArgsConstructor
 public class RelayControllerMapper {
 
     private RCActionDTO mapAction(RCAction action) {
@@ -66,34 +66,6 @@ public class RelayControllerMapper {
                         .collect(Collectors.toSet())
         );
     }
-//    public List<RCInputDTO> mapInputs(Set<RCInput> inputs) {
-//        return inputs.stream()
-//                .map(this::mapInput)
-//                .toList();
-//    }
-//    public RelayControllerDTO toDto(RelayController controller) {
-//        RelayControllerDTO dto = new RelayControllerDTO();
-//        dto.setUuid(controller.getUuid());
-//        dto.setName(controller.getName());
-//        dto.setMac(controller.getMac());
-//        dto.setType(controller.getType());
-//        dto.setStatus(controller.getStatus());
-//        dto.setDescription(controller.getDescription());
-//        dto.setModel(controller.getModel());
-//
-//        List<RCOutputDTO> outputs = new ArrayList<>(controller.getOutputs().stream()
-//                .map(o -> new RCOutputDTO(o.getUuid(), o.getId(), o.getName(), o.getLimit(), o.getType(), o.get_default(), o.getState(), o.getAlice(), o.getRoom(), o.getOn(), o.getOff()))
-//                .toList());
-//
-//
-//        List<RCInputDTO> inputs = new ArrayList<>(controller.getInputs().stream()
-//                .map(this::mapInput)
-//                .toList());
-//        dto.setOutputs(outputs);
-//        dto.setInputs(inputs);
-//
-//        return dto;
-//    }
 
     public List<RCOutputDTO> outputsToDTO(List<RCOutput> outputs) {
         return new ArrayList<>(outputs.stream()
@@ -124,6 +96,77 @@ public class RelayControllerMapper {
         }
 
         return rcModbusConfigDTO;
+    }
+
+    public RelayController toEntity(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
+        RelayController relayController = new RelayController();
+
+        // general info
+        relayController.setMac(rcConfigDTO.getMac());
+        relayController.setName(rcConfigDTO.getName());
+        relayController.setDescription(rcConfigDTO.getDescription());
+        relayController.setModel(rcConfigDTO.getModel());
+        relayController.setType("relayController");
+
+        // outputs
+        List<RCOutput> outputs = new ArrayList<>();
+        for (RCOutputDTO outputDTO : rcConfigDTO.getIo().getOutputs()) {
+            RCOutput output = new RCOutput();
+            output.setRelayController(relayController);
+            BeanUtils.copyProperties(output, outputDTO);
+            outputs.add(output);
+        }
+        relayController.setOutputs(outputs);
+
+        // inputs
+        List<RCInput> inputs = new ArrayList<>();
+        for (RCInputDTO inputDTO : rcConfigDTO.getIo().getInputs()) {
+            RCInput input = new RCInput();
+            input.setRelayController(relayController);
+            //BeanUtils.copyProperties(input, inputDTO); // Cannot invoke kz.home.RelaySmartSystems.model.relaycontroller.RCInput.setEvents - argument type mismatch
+            input.setId(inputDTO.getId());
+            input.setName(inputDTO.getState());
+            input.setType(inputDTO.getType());
+            input.setState(inputDTO.getState());
+            input.setSlaveId(inputDTO.getSlaveId());
+
+            if (inputDTO.getEvents() != null) {
+                List<RCEvent> newEvents = new ArrayList<>();
+                for (RCEventDTO eventDTO : inputDTO.getEvents()) {
+                    RCEvent newEvent = new RCEvent();
+                    BeanUtils.copyProperties(newEvent, eventDTO);
+                    newEvent.setInput(input);
+                    // actions
+                    if (eventDTO.getActions() != null) {
+                        Set<RCAction> newActions = new HashSet<>();
+                        for (RCActionDTO action : eventDTO.getActions()) {
+                            RCAction newAction = new RCAction();
+                            BeanUtils.copyProperties(newAction, action);
+                            newAction.setEvent(newEvent);
+                            newActions.add(newAction);
+                        }
+                        newEvent.setActions(newActions);
+                    }
+                    // acls
+                    if (eventDTO.getAcls() != null) {
+                        Set<RCAcl> newAcls = new HashSet<>();
+                        for (RCAclDTO acl : eventDTO.getAcls()) {
+                            RCAcl newAcl = new RCAcl();
+                            BeanUtils.copyProperties(newAcl, acl);
+                            newAcl.setEvent(newEvent);
+                            newAcls.add(newAcl);
+                        }
+                        newEvent.setAcls(newAcls);
+                    }
+                    newEvents.add(newEvent);
+                }
+                input.setEvents(newEvents);
+            }
+            inputs.add(input);
+        }
+        relayController.setInputs(inputs);
+
+        return relayController;
     }
 }
 

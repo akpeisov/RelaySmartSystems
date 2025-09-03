@@ -14,7 +14,7 @@ import java.util.Map;
 @Getter
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RCUpdate {
+public class RCUpdateDTO {
     private String mac;
     private String state;
     private Integer output;

@@ -95,11 +95,11 @@ public class APIController {
         userRepository.deleteById(id);
     }
 
-    @PostMapping("/addrelaycontroller")
-    public RelayController addRelayController(@RequestBody RelayController relayController) {
-        User user = userRepository.findById("user").orElse(null);
-        return relayControllerService.addRelayController(relayController, user);
-    }
+//    @PostMapping("/addrelaycontroller")
+//    public RelayController addRelayController(@RequestBody RelayController relayController) {
+//        User user = userRepository.findById("user").orElse(null);
+//        return relayControllerService.addRelayController(relayController, user);
+//    }
 
     @GetMapping(path = "/config/{mac}", produces = MediaType.APPLICATION_JSON_VALUE)
     public String getConfig(@PathVariable String mac) {
