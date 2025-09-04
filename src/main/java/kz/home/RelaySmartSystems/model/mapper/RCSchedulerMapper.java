@@ -14,6 +14,8 @@ import java.util.List;
 public class RCSchedulerMapper {
     public RCScheduler toEntity(RCSchedulerDTO rcSchedulerDTO) {
         RCScheduler rcScheduler = new RCScheduler();
+        if (rcSchedulerDTO == null)
+            return null;
         rcScheduler.setEnabled(rcSchedulerDTO.isEnabled());
 
         List<RCTask> tasks = new ArrayList<>();

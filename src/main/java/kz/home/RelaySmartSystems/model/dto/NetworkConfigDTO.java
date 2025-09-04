@@ -1,6 +1,7 @@
 package kz.home.RelaySmartSystems.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import java.util.UUID;
 
@@ -24,6 +25,7 @@ public class NetworkConfigDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class EthDto {
         private boolean enabled;
         private boolean dhcp;
@@ -36,6 +38,7 @@ public class NetworkConfigDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class WifiDto {
         private boolean enabled;
         private boolean dhcp;
@@ -47,6 +50,7 @@ public class NetworkConfigDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class FtpDto {
         private boolean enabled;
         private String user;

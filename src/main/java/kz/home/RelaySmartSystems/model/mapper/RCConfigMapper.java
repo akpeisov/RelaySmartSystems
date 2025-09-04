@@ -29,27 +29,29 @@ public class RCConfigMapper {
     private NetworkConfigDTO networkToDto(NetworkConfig networkConfig) {
         if (networkConfig == null)
             return null;
-        NetworkConfigDTO rcModbusConfigDTO = new NetworkConfigDTO();
-        rcModbusConfigDTO.setNtpTZ(networkConfig.getNtpTZ());
-        rcModbusConfigDTO.setNtpServer(networkConfig.getNtpServer());
-        rcModbusConfigDTO.setOtaURL(networkConfig.getOtaURL());
+        NetworkConfigDTO networkConfigDTO = new NetworkConfigDTO();
+        networkConfigDTO.setNtpTZ(networkConfig.getNtpTZ());
+        networkConfigDTO.setNtpServer(networkConfig.getNtpServer());
+        networkConfigDTO.setOtaURL(networkConfig.getOtaURL());
         // cloud
         NetworkConfigDTO.CloudDto cloudDto = new NetworkConfigDTO.CloudDto();
         cloudDto.setAddress(networkConfig.getCloud().getAddress());
         cloudDto.setEnabled(networkConfig.getCloud().isEnabled());
-        rcModbusConfigDTO.setCloud(cloudDto);
+        networkConfigDTO.setCloud(cloudDto);
         // ftp
-        NetworkConfigDTO.FtpDto ftpDto = new NetworkConfigDTO.FtpDto();
-        ftpDto.setUser(networkConfig.getFtp().getUser());
-        ftpDto.setPass(networkConfig.getFtp().getPass());
-        ftpDto.setEnabled(networkConfig.getFtp().isEnabled());
-        rcModbusConfigDTO.setFtp(ftpDto);
+        if (networkConfig.getFtp() != null) {
+            NetworkConfigDTO.FtpDto ftpDto = new NetworkConfigDTO.FtpDto();
+            ftpDto.setUser(networkConfig.getFtp().getUser());
+            ftpDto.setPass(networkConfig.getFtp().getPass());
+            ftpDto.setEnabled(networkConfig.getFtp().isEnabled());
+            networkConfigDTO.setFtp(ftpDto);
+        }
         // eth
-        rcModbusConfigDTO.setEth(getEthDto(networkConfig));
+        networkConfigDTO.setEth(getEthDto(networkConfig));
         // wifi
-        rcModbusConfigDTO.setWifi(getWifiDto(networkConfig));
+        networkConfigDTO.setWifi(getWifiDto(networkConfig));
 
-        return rcModbusConfigDTO;        
+        return networkConfigDTO;
     }
 
     private static NetworkConfigDTO.EthDto getEthDto(NetworkConfig networkConfig) {
@@ -92,7 +94,7 @@ public class RCConfigMapper {
         // modbus
         RCModbusConfigDTO rcModbusInfoDTO = relayControllerMapper.modbusToDTO(controller.getModbusConfig());
         // for master include all slaves
-        if ("master".equalsIgnoreCase(rcModbusInfoDTO.getMode())) {
+        if (rcModbusInfoDTO != null && "master".equalsIgnoreCase(rcModbusInfoDTO.getMode())) {
             List<RCModbusConfigDTO.SlaveDTO> slaveDTOS = new ArrayList<>();
             for (RCModbusConfig modbusConfig : modbusConfigRepository.findByMaster(controller.getMac())) {
                 RCModbusConfigDTO.SlaveDTO slaveDTO = new RCModbusConfigDTO.SlaveDTO();

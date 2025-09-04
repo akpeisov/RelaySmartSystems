@@ -156,6 +156,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // вызывается если это новый контроллер
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
+                    rcConfigDTO.setMac(wsSession.getControllerId());
                     relayControllerService.saveRelayController(rcConfigDTO);
                     wsSession.setAuthorized(true);
                     wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
