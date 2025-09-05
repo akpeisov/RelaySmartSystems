@@ -1,4 +1,4 @@
-package kz.home.RelaySmartSystems.model.def;
+package kz.home.RelaySmartSystems.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -9,11 +9,10 @@ import lombok.Setter;
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class Action {
+public class ActionDTO {
     private String mac;
     private Integer output;
     private Integer input;
     private String action;
     private Integer slaveId;
-    private Integer duration;
 }

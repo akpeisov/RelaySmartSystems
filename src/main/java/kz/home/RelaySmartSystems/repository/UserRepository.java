@@ -1,8 +1,7 @@
 package kz.home.RelaySmartSystems.repository;
 
+import kz.home.RelaySmartSystems.model.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import kz.home.RelaySmartSystems.model.*;
 
 //@Repository
 public interface UserRepository extends JpaRepository<User, String> {

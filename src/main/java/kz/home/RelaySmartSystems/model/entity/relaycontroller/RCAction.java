@@ -1,4 +1,4 @@
-package kz.home.RelaySmartSystems.model.relaycontroller;
+package kz.home.RelaySmartSystems.model.entity.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

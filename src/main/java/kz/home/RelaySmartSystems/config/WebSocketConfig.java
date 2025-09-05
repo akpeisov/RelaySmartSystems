@@ -2,7 +2,6 @@ package kz.home.RelaySmartSystems.config;
 
 import kz.home.RelaySmartSystems.controller.WebSocketHandler;
 import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
-import kz.home.RelaySmartSystems.model.User;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;

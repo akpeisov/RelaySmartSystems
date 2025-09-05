@@ -179,18 +179,18 @@ hsEOoRXDPxct0Wbcz94jwjI=
     function triggerButtonEvent(button) {
       const event = button.events?.find(e => e.event === 'toggle');
       if (!event) return;
-      event.actions.forEach(action => handleOutputAction(action));
+      event.actions.forEach(actionDTO => handleOutputAction(actionDTO));
       renderTable();
     }
 
-    function handleOutputAction(action) {
-      const output = state.outputs[action.output];
+    function handleOutputAction(actionDTO) {
+      const output = state.outputs[actionDTO.output];
       if (!output) return;
-      if (action.action === 'toggle') {
+      if (actionDTO.actionDTO === 'toggle') {
         output.state = output.state === 'on' ? 'off' : 'on';
-      } else if (action.action === 'on') {
+      } else if (actionDTO.actionDTO === 'on') {
         output.state = 'on';
-      } else if (action.action === 'off') {
+      } else if (actionDTO.actionDTO === 'off') {
         output.state = 'off';
       }
 
@@ -234,14 +234,14 @@ hsEOoRXDPxct0Wbcz94jwjI=
 
     function handleIncomingMessage(msg) {
       if (msg.type === 'ACTION') {
-        const { output, input, action } = msg.payload;
+        const { output, input, actionDTO } = msg.payload;
         if (output !== undefined) {
-          handleOutputAction({ output, action });
+          handleOutputAction({ output, actionDTO });
           renderTable();
         } else if (input !== undefined) {
           const inp = state.inputs[input];
           if (!inp) return;
-          const evt = inp.events?.find(e => e.event === action);
+          const evt = inp.events?.find(e => e.event === actionDTO);
           if (!evt) return;
           evt.actions.forEach(act => handleOutputAction(act));
           renderTable();

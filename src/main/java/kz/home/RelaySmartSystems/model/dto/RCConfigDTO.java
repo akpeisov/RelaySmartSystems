@@ -16,4 +16,5 @@ public class RCConfigDTO {
     private RCModbusConfigDTO modbus;
     private NetworkConfigDTO network;
     private RCSchedulerDTO scheduler;
+    private RCMqttDTO mqtt;
 }

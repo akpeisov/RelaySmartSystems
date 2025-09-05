@@ -1,6 +1,6 @@
-package kz.home.RelaySmartSystems.model.relaycontroller;
+package kz.home.RelaySmartSystems.model.entity.relaycontroller;
 
-import kz.home.RelaySmartSystems.model.Controller;
+import kz.home.RelaySmartSystems.model.entity.Controller;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,4 +31,7 @@ public class RelayController extends Controller {
 
     @OneToOne(mappedBy = "controller", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private RCScheduler scheduler;
+
+    @OneToOne(mappedBy = "controller", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private RCMqtt mqtt;
 }

@@ -1,4 +1,4 @@
-package kz.home.RelaySmartSystems.model;
+package kz.home.RelaySmartSystems.model.entity;
 
 import lombok.Getter;
 import lombok.Setter;

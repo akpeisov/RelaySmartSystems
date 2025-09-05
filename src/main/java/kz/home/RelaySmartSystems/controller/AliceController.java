@@ -2,9 +2,9 @@ package kz.home.RelaySmartSystems.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.alice.AliceResponseError;
-import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.model.alice.*;
-import kz.home.RelaySmartSystems.model.relaycontroller.RCOutput;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.RCOutput;
 import kz.home.RelaySmartSystems.repository.RCOutputRepository;
 import kz.home.RelaySmartSystems.repository.UserRepository;
 import kz.home.RelaySmartSystems.service.AliceRequestLogService;

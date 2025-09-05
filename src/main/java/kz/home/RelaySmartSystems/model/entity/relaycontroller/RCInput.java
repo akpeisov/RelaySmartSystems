@@ -1,15 +1,11 @@
-package kz.home.RelaySmartSystems.model.relaycontroller;
+package kz.home.RelaySmartSystems.model.entity.relaycontroller;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.*;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Setter

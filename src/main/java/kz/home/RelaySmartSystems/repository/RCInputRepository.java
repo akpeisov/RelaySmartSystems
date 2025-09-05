@@ -1,6 +1,6 @@
 package kz.home.RelaySmartSystems.repository;
 
-import kz.home.RelaySmartSystems.model.relaycontroller.RCInput;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.RCInput;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 

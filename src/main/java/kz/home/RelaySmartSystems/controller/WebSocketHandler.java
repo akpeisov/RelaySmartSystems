@@ -9,6 +9,8 @@ import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.def.*;
 import kz.home.RelaySmartSystems.model.dto.*;
+import kz.home.RelaySmartSystems.model.entity.Controller;
+import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
@@ -112,7 +114,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 else if (hello.getType().equalsIgnoreCase("RC1"))
                     wsSession.setType("relayController");
 
-
                 if (tokenData.getMac() != null) {
                     // Это контроллер
                     String mac = tokenData.getMac();
@@ -181,9 +182,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // Обновление состояния входов/выходов сразу всех. Используется при подключении контроллера
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     RCUpdateIODTO rcUpdateIODTO = objectMapper.readValue(json, RCUpdateIODTO.class);
-                //                    RelayController relayController = objectMapper.readValue(json, RelayController.class);
-                    //relayController.setMac(wsSession.getControllerId());
-                    relayControllerService.updateRelayControllerIOStates(wsSession.getControllerId(), rcUpdateIODTO);
+                    rcUpdateIODTO.setMac(wsSession.getControllerId());
+                    relayControllerService.updateRelayControllerIOStates(rcUpdateIODTO);
+                    // send all data to web users
+                    sendMessageToWebUser(wsSession.getUser(), relayControllerService.getIOStates(wsSession.getControllerId()));
                 }
                 break;
 
@@ -200,7 +202,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                             // event for link
                             // проверить есть ли запрос на линковку в веб сессии
                             WSSession linkSession = findSessionForLinkRequest(update.getMac());
-                            //User user = isLinkRequestActive(update.getMac());
                             if (linkSession != null) {
                                 logger.info("Link request ok");
                                 if (controllerService.linkController(update.getMac(), linkSession.getUser()).equalsIgnoreCase("OK")) {
@@ -216,7 +217,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         //logger.info(String.format("User found %s", user.getFio()));
                         sendMessageToWebUser(wsSession.getUser(), wsTextMessage.makeMessage());
                     } else {
-                        logger.info("no user found");
+                        logger.info("UPDATE. No user session found");
                     }
                 }
                 break;
@@ -224,11 +225,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "SETDEVICECONFIG":
                 // результат обновления конфига от контроллера
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
-                    Message message1 = objectMapper.readValue(json, Message.class);
-                    if (message1.getMessage() != null) {
-                        logger.info("SETDEVICECONFIG msg {}", message1.getMessage());
+                    Message msg = objectMapper.readValue(json, Message.class);
+                    if (msg.getMessage() != null) {
+                        logger.info("SETDEVICECONFIG msg {}", msg.getMessage());
                         //session.sendMessage(new TextMessage());
-                        if ("OK".equalsIgnoreCase(message1.getMessage())) {
+                        if ("OK".equalsIgnoreCase(msg.getMessage())) {
                             sendMessageToWebUser(wsSession.getUser(), successMessage("Upload successful"));
                         } else {
                             sendMessageToWebUser(wsSession.getUser(), errorMessage("Upload to controller failed"));
@@ -240,13 +241,13 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "ACTION":
                 // отправка действия на контроллер
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    Action action = objectMapper.readValue(json, Action.class);
-                    User user = controllerService.findControllerOwner(action.getMac());
+                    ActionDTO actionDTO = objectMapper.readValue(json, ActionDTO.class);
+                    User user = controllerService.findControllerOwner(actionDTO.getMac());
                     if (user != null && user.equals(wsSession.getUser())) {
-                        logger.info("Sending message {} to controller {}", action.getAction(), action.getMac());
-                        sendMessageToController(action.getMac(), wsTextMessage.makeMessage());
+                        logger.info("Sending message {} to controller {}", actionDTO.getAction(), actionDTO.getMac());
+                        sendMessageToController(actionDTO.getMac(), wsTextMessage.makeMessage());
                     } else {
-                        logger.error("Action message to {} with incorrect owner {}", action.getMac(), wsSession.getUser().getId());
+                        logger.error("Action message to {} with incorrect owner {}", actionDTO.getMac(), wsSession.getUser().getId());
                     }
                 }
                 break;
@@ -317,7 +318,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Command command = objectMapper.readValue(json, Command.class);
-                    logger.info(String.format("Command %s, mac %s", command.getCommand(), command.getMac()));
+                    logger.info("Command {}, mac {}", command.getCommand(), command.getMac());
                     if ("enableSendLogs".equalsIgnoreCase(command.getCommand())) {
                         Map<String, Object> payld = new HashMap<>();
                         payld.put("send", true);
@@ -328,7 +329,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         sendMessageToController(command.getMac(), WSTextMessage.send("SENDLOGS", payld));
                     } else if ("startOTA".equalsIgnoreCase(command.getCommand())) {
                         Map<String, Object> payld = new HashMap<>();
-                        payld.put("url", "https://akpeisov.kz/RelayController/relay32.bin");
+                        payld.put("url", "https://akpeisov.kz/RelayController/relay32.bin"); // TODO : move it to env
                         sendMessageToController(command.getMac(), WSTextMessage.send("OTA", payld));
                     } else if ("INFO".equalsIgnoreCase(command.getCommand())) {
                         sendMessageToController(command.getMac(), WSTextMessage.send("INFO", null));
@@ -336,12 +337,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         sendMessageToController(command.getMac(), WSTextMessage.send("REBOOT", null));
                     } else if ("UPLOADCONFIG".equalsIgnoreCase(command.getCommand())) {
                         if (isControllerOnline(command.getMac())) {
-//                            // make config and send to controller
+//                          // make config and send to controller
                             String deviceConfig = relayControllerService.makeDeviceConfig(command.getMac());
-//                            logger.info(deviceConfig);
+//                          logger.info(deviceConfig);
                             if (!"{}".equalsIgnoreCase(deviceConfig)) {
-                                String res = sendMessageToController(command.getMac(), relayControllerService.makeDeviceConfig(command.getMac()));
-                                logger.info(String.format("sendMessageToController %s", res));
+                                String res = sendMessageToController(command.getMac(), deviceConfig);
+                                logger.info("sendMessageToController {}", res);
                                 if ("OK".equalsIgnoreCase(res)) {
                                     wsSession.sendMessage(new TextMessage(successMessage("Successfully")));
                                 } else {
@@ -391,18 +392,19 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        // TODO : audit session
         WSSession wsSession = new WSSession(session);
-        wsSession.setConnectionDate(LocalDateTime.now());
         String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
         wsSession.setClientIP(clientIpAddress == null ? Objects.requireNonNull(session.getRemoteAddress()).toString() : clientIpAddress);
         wsSessions.add(wsSession);
-        logger.info(String.format("New client connected with ID %s remote IP %s client IP %s", session.getId(), session.getRemoteAddress(), clientIpAddress));
+        logger.info("New client connected with ID {} remote IP {} client IP {}", session.getId(), session.getRemoteAddress(), clientIpAddress);
         super.afterConnectionEstablished(session);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        // find current conrtoller and set offline
+        // find current controller and set offline
+        // TODO : audit session
         String mac = getControllerIdForWSSession(session);
         if (mac != null)
             controllerService.setControllerOffline(mac);
@@ -412,21 +414,19 @@ public class WebSocketHandler extends TextWebSocketHandler {
             if (wsSession.getSession().equals(session)) {
                 type = wsSession.getType();
                 sessionToDel = wsSession;
-                //wsSessions.remove(wsSession);
                 break;
             }
         }
         if (sessionToDel != null)
             wsSessions.remove(sessionToDel);
 
-        //wsSessions.remove(new WSSession(session));
-        logger.info(String.format("Client %s disconnected with ID %s. Status %s", type, session.getId(), status));
+        logger.info("Client {} disconnected with ID {}. Status {}", type, session.getId(), status);
         super.afterConnectionClosed(session, status);
     }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) {
-        logger.info(String.format("handleTransportError with ID %s %s", session.getId(), exception.getMessage()));
+        logger.info("handleTransportError with ID {} {}", session.getId(), exception.getMessage());
     }
 
     public String sendMessageToController(String controllerId, String message) {
@@ -435,10 +435,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
         for (WSSession session: wsSessions) {
             if (!"web".equalsIgnoreCase(session.getType()) &&
-                    controllerId.toUpperCase().equals(session.getControllerId())) {
+                    controllerId.equalsIgnoreCase(session.getControllerId())) {
                 try {
                     if (session.getSession().isOpen()) {
-                        //session.getSession().sendMessage(new TextMessage(message));
                         session.sendMessage(new TextMessage(message));
                         return "OK";
                     }
@@ -455,22 +454,21 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void sendMessageToWebUser(User user, String message) {
         // Отправка сообщения во все пользовательские сессии
         if (user == null) {
-            logger.error("User is null");
+            logger.error("sendMessageToWebUser. User is null");
             return;
         }
 
-        logger.info(String.format("sendMessageToWebUser User %s. Message %s", user.getId(), message));
+        logger.info("sendMessageToWebUser. User {}. Message {}", user.getId(), message);
 
         for (WSSession session: wsSessions) {
             if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {
                 try {
                     if (session.getSession().isOpen()) {
-                        //session.getSession().sendMessage(new TextMessage(message));
                         session.sendMessage(new TextMessage(message));
-                        logger.info(String.format("Message to user %s sent", user.getFio()));
+                        logger.info("Message to user {} sent", user.getFio());
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error(e.getLocalizedMessage());
                 }
             }
         }
@@ -480,9 +478,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
         // определить есть ли запрос на линковку в текущих сессиях фронта
         for (WSSession wsSession : wsSessions) {
             if ("web".equals(wsSession.getType()) &&
-                    wsSession.getControllerId() != null &&
-                    wsSession.getControllerId().equals(mac) &&
-                    "linkRequested".equalsIgnoreCase((String)wsSession.getObj()))  {
+                wsSession.getControllerId() != null &&
+                wsSession.getControllerId().equalsIgnoreCase(mac) &&
+                "linkRequested".equalsIgnoreCase((String)wsSession.getObj()))  {
                 return wsSession;
             }
         }
@@ -490,14 +488,17 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     private boolean isControllerOnline(String mac) {
+        if (mac == null)
+            return false;
         for (WSSession wsSession : wsSessions) {
-            if (wsSession.getControllerId() != null && wsSession.getControllerId().equals(mac)) {
+            if (mac.equalsIgnoreCase(wsSession.getControllerId())) {
                 return true;
             }
         }
         return false;
     }
 
+    /*
     private void setControllerIdForWSSession(WebSocketSession targetSession, String controllerId) {
         if (controllerId == null)
             return;
@@ -539,14 +540,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private String getControllerIdForWSSession(WebSocketSession targetSession) {
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                return wsSession.getControllerId();
-            }
-        }
-        return null;
-    }
     private String getTypeForWSSession(WebSocketSession targetSession) {
         for (WSSession wsSession : wsSessions) {
             if (wsSession.getSession().equals(targetSession)) {
@@ -570,13 +563,26 @@ public class WebSocketHandler extends TextWebSocketHandler {
         return controllerService.isControllerLinked(mac);
     }
 
+    public List<WSSession> getCurrentWSSessions() {
+        return wsSessions;
+    }
+    */
+
+    private String getControllerIdForWSSession(WebSocketSession targetSession) {
+        for (WSSession wsSession : wsSessions) {
+            if (wsSession.getSession().equals(targetSession)) {
+                return wsSession.getControllerId();
+            }
+        }
+        return null;
+    }
+
     @Scheduled(fixedRate = 5000)
     private void alive() throws IOException {
         for (WSSession wsSession : wsSessions) {
             if (wsSession != null && "web".equalsIgnoreCase(wsSession.getType()) &&
                     wsSession.getSession().isOpen() && wsSession.isExpired()) {
                 String date = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date());
-                //wsSession.getSession().sendMessage(new TextMessage(AlertMessage.makeAlert(String.format("alive %s", date))));
                 wsSession.sendMessage(new TextMessage(AlertMessage.makeAlert(String.format("alive %s", date))));
             }
         }
@@ -585,57 +591,5 @@ public class WebSocketHandler extends TextWebSocketHandler {
     @Scheduled(fixedRate = 20000)
     private void serviceTask() {
         controllerService.setOffline();
-    }
-
-    public List<WSSession> getCurrentWSSessions() {
-        return wsSessions;
-    }
-
-    private String correctJSON(String json) {
-        // TODO : перенести в отдельный статичный класс
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = null;
-        String cleanedJson = null;
-        try {
-            root = mapper.readTree(json);
-            removeFieldsRecursive(root, "uuid", "outputID", "order", "state");
-            cleanedJson = mapper.writer().writeValueAsString(root);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        return cleanedJson;
-//        ObjectMapper objectMapper = new ObjectMapper();
-//        JsonNode jsonNode = null;
-//        String result = null;
-//        try {
-//            jsonNode = objectMapper.readTree(json);
-//            ObjectNode object = (ObjectNode) jsonNode;
-//            object.remove("uuid");
-//            result = objectMapper.writeValueAsString(object);
-//        } catch (JsonProcessingException e) {
-//            throw new RuntimeException(e);
-//        }
-//        return result;
-//        Assertions.assertEquals("{\"name\":\"John\",\"city\":\"New York\"}", updatedJson);
-    }
-
-
-    private static void removeFieldsRecursive(JsonNode node, String... fieldsToRemove) {
-        // TODO : перенести в отдельный статичный класс
-        if (node.isObject()) {
-            ObjectNode objNode = (ObjectNode) node;
-            for (String field : fieldsToRemove) {
-                objNode.remove(field);
-            }
-            Iterator<Map.Entry<String, JsonNode>> iter = objNode.fields();
-            while (iter.hasNext()) {
-                Map.Entry<String, JsonNode> entry = iter.next();
-                removeFieldsRecursive(entry.getValue(), fieldsToRemove);
-            }
-        } else if (node.isArray()) {
-            for (JsonNode item : node) {
-                removeFieldsRecursive(item, fieldsToRemove);
-            }
-        }
     }
 }

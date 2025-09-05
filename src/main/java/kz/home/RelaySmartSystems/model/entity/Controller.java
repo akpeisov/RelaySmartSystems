@@ -1,4 +1,4 @@
-package kz.home.RelaySmartSystems.model;
+package kz.home.RelaySmartSystems.model.entity;
 
 import com.fasterxml.jackson.annotation.*;
 import lombok.Getter;

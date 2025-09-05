@@ -1,6 +1,6 @@
-package kz.home.RelaySmartSystems.model.unicontroller;
+package kz.home.RelaySmartSystems.model.entity.unicontroller;
 
-import kz.home.RelaySmartSystems.model.Controller;
+import kz.home.RelaySmartSystems.model.entity.Controller;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

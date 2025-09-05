@@ -13,6 +13,31 @@
         "model": "RCV2B",
         "mac": "N12345678",
         "description": "test",
+        "mqtt": {
+            "enabled": false,
+            "url": "qwerty",
+            "topics": [
+                // dev/outputs/slid/out  ACTION
+                // dev/inputs/slid/in  EVENT
+                {
+                    "topic": "dev1/inputs/0/3",
+                    "events": [
+                        {                        
+                            "event": "on",
+                            "type": "output",
+                            "output": 0,
+                            "action": "on"                        
+                        },
+                        {                        
+                            "event": "off",
+                            "type": "out",
+                            "output": 0,
+                            "action": "off"                        
+                        }
+                    ]
+                }
+            ]
+        },
         "modbus": {
             "mode": "master",
             "pollingTime": 100,

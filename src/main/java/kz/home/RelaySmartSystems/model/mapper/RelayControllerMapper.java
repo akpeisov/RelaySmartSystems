@@ -1,8 +1,7 @@
 package kz.home.RelaySmartSystems.model.mapper;
 
 import kz.home.RelaySmartSystems.model.dto.*;
-import kz.home.RelaySmartSystems.model.relaycontroller.*;
-import kz.home.RelaySmartSystems.repository.RCModbusConfigRepository;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
 import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -123,7 +122,7 @@ public class RelayControllerMapper {
         for (RCInputDTO inputDTO : rcConfigDTO.getIo().getInputs()) {
             RCInput input = new RCInput();
             input.setRelayController(relayController);
-            //BeanUtils.copyProperties(input, inputDTO); // Cannot invoke kz.home.RelaySmartSystems.model.relaycontroller.RCInput.setEvents - argument type mismatch
+            //BeanUtils.copyProperties(input, inputDTO); // Cannot invoke kz.home.RelaySmartSystems.model.entity.relaycontroller.RCInput.setEvents - argument type mismatch
             input.setId(inputDTO.getId());
             input.setName(inputDTO.getState());
             input.setType(inputDTO.getType());
@@ -167,6 +166,30 @@ public class RelayControllerMapper {
         relayController.setInputs(inputs);
 
         return relayController;
+    }
+
+    public RCUpdateIODTO getRCStates(RelayController relayController) {
+        RCUpdateIODTO rcUpdateIODTO = new RCUpdateIODTO();
+        rcUpdateIODTO.setMac(relayController.getMac());
+        List<RCUpdateIODTO.RCState> rcStates = new ArrayList<>();
+        for (RCOutput rcOutput : relayController.getOutputs()) {
+            RCUpdateIODTO.RCState rcState = new RCUpdateIODTO.RCState();
+            rcState.setState(rcOutput.getState());
+            rcState.setId(rcOutput.getId());
+            rcState.setSlaveId(rcOutput.getSlaveId());
+            rcStates.add(rcState);
+        }
+        rcUpdateIODTO.setOutputs(rcStates);
+        rcStates.clear();
+        for (RCInput rcInput : relayController.getInputs()) {
+            RCUpdateIODTO.RCState rcState = new RCUpdateIODTO.RCState();
+            rcState.setState(rcInput.getState());
+            rcState.setId(rcInput.getId());
+            rcState.setSlaveId(rcInput.getSlaveId());
+            rcStates.add(rcState);
+        }
+        rcUpdateIODTO.setInputs(rcStates);
+        return rcUpdateIODTO;
     }
 }
 

@@ -2,14 +2,11 @@ package kz.home.RelaySmartSystems.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kz.home.RelaySmartSystems.model.NetworkConfig;
-import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.entity.NetworkConfig;
+import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.model.dto.*;
-import kz.home.RelaySmartSystems.model.mapper.NetworkConfigMapper;
-import kz.home.RelaySmartSystems.model.mapper.RCConfigMapper;
-import kz.home.RelaySmartSystems.model.mapper.RCSchedulerMapper;
-import kz.home.RelaySmartSystems.model.mapper.RelayControllerMapper;
-import kz.home.RelaySmartSystems.model.relaycontroller.*;
+import kz.home.RelaySmartSystems.model.mapper.*;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.*;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -41,6 +38,8 @@ public class RelayControllerService {
     private final RCConfigMapper rcConfigMapper;
     private final RCSchedulerMapper rcSchedulerMapper;
     private final RCSchedulerRepository rcSchedulerRepository;
+    private final RCMqttMapper rcMqttMapper;
+    private final RCMqttRepository rcMqttRepository;
     private static final Logger logger = LoggerFactory.getLogger(RelayControllerService.class);
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
                                   RCOutputRepository outputRepository,
@@ -55,7 +54,9 @@ public class RelayControllerService {
                                   NetworkConfigRepository networkConfigRepository,
                                   RCConfigMapper rcConfigMapper,
                                   RCSchedulerMapper rcSchedulerMapper,
-                                  RCSchedulerRepository rcSchedulerRepository) {
+                                  RCSchedulerRepository rcSchedulerRepository,
+                                  RCMqttMapper rcMqttMapper,
+                                  RCMqttRepository rcMqttRepository) {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
         this.inputRepository = inputRepository;
@@ -69,14 +70,16 @@ public class RelayControllerService {
         this.rcConfigMapper = rcConfigMapper;
         this.rcSchedulerMapper = rcSchedulerMapper;
         this.rcSchedulerRepository = rcSchedulerRepository;
+        this.rcMqttMapper = rcMqttMapper;
+        this.rcMqttRepository = rcMqttRepository;
     }
 
     @Transactional
-    public void updateRelayControllerIOStates(String mac, RCUpdateIODTO rcUpdateIODTO) {
-        RelayController relayController = relayControllerRepository.findByMac(mac);
+    public void updateRelayControllerIOStates(RCUpdateIODTO rcUpdateIODTO) {
+        RelayController relayController = relayControllerRepository.findByMac(rcUpdateIODTO.getMac());
         if (relayController == null) {
             // контролер не найден
-            logger.error("Relay controller with mac {} not found", mac);
+            logger.error("Relay controller with mac {} not found", rcUpdateIODTO.getMac());
             return;
         }
 
@@ -156,7 +159,10 @@ public class RelayControllerService {
         rcScheduler.setController(relayController);
         rcSchedulerRepository.save(rcScheduler);
 
-        // mqtt TODO : do it
+        // mqtt
+        RCMqtt rcMqtt = rcMqttMapper.toEntity(rcConfigDTO.getMqtt());
+        rcMqtt.setController(relayController);
+        rcMqttRepository.save(rcMqtt);
     }
 
     private static RCModbusConfig getRcModbusConfig(RCConfigDTO rcConfigDTO, RelayController relayController) {
@@ -409,6 +415,26 @@ public class RelayControllerService {
             return json;
         } catch (JsonProcessingException e) {
             //throw new RuntimeException(e);
+        }
+        return "{}";
+    }
+
+    public String getIOStates(String mac) {
+        RelayController relayController = relayControllerRepository.findByMac(mac);
+        if (relayController == null)
+            return "{}";
+        RCUpdateIODTO rcUpdateIODTO = relayControllerMapper.getRCStates(relayController);
+
+        Map<String, Object> objectMap = new HashMap<>();
+        objectMap.put("type", "UPDATE");
+        objectMap.put("payload", rcUpdateIODTO);
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(objectMap);
+            logger.info(json);
+            return json;
+        } catch (JsonProcessingException e) {
+            logger.error("getIOStates. {}", e.getLocalizedMessage());
         }
         return "{}";
     }

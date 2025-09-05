@@ -1,7 +1,5 @@
 package kz.home.RelaySmartSystems.model.dto;
 
-import kz.home.RelaySmartSystems.model.User;
-
 import java.time.LocalDateTime;
 
 public class WSSessionDTO {

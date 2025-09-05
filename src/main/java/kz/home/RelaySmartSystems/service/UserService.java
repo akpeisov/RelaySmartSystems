@@ -1,6 +1,6 @@
 package kz.home.RelaySmartSystems.service;
 
-import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

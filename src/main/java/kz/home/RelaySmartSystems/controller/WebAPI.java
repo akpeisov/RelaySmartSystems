@@ -1,12 +1,12 @@
 package kz.home.RelaySmartSystems.controller;
 
-import kz.home.RelaySmartSystems.model.Controller;
-import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.entity.Controller;
+import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.model.def.CRequest;
 import kz.home.RelaySmartSystems.model.def.CResponse;
 import kz.home.RelaySmartSystems.model.mapper.RCConfigMapper;
 import kz.home.RelaySmartSystems.model.mapper.RelayControllerMapper;
-import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.RelayController;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import kz.home.RelaySmartSystems.repository.UniControllerRepository;
 import kz.home.RelaySmartSystems.service.ControllerService;

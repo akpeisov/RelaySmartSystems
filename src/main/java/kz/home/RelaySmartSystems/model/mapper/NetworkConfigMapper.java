@@ -1,7 +1,7 @@
 package kz.home.RelaySmartSystems.model.mapper;
 
-import kz.home.RelaySmartSystems.model.*;
 import kz.home.RelaySmartSystems.model.dto.NetworkConfigDTO;
+import kz.home.RelaySmartSystems.model.entity.*;
 import org.springframework.stereotype.Service;
 
 @Service

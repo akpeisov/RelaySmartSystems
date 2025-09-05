@@ -1,7 +1,7 @@
 package kz.home.RelaySmartSystems.service;
 
-import kz.home.RelaySmartSystems.model.Controller;
-import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.entity.Controller;
+import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.repository.ControllerRepository;
 import org.slf4j.Logger;

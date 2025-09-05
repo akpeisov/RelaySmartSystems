@@ -1,12 +1,7 @@
 package kz.home.RelaySmartSystems.model.alice;
 
 import com.fasterxml.jackson.annotation.*;
-import kz.home.RelaySmartSystems.model.User;
 
-import javax.persistence.CascadeType;
-import javax.persistence.FetchType;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AliceDevice {

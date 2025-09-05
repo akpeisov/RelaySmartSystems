@@ -1,29 +1,28 @@
 package kz.home.RelaySmartSystems.model.mapper;
 
-import kz.home.RelaySmartSystems.model.NetworkConfig;
+import kz.home.RelaySmartSystems.model.entity.NetworkConfig;
 import kz.home.RelaySmartSystems.model.dto.*;
-import kz.home.RelaySmartSystems.model.relaycontroller.*;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.RCModbusConfigRepository;
-import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class RCConfigMapper {
     private final RelayControllerMapper relayControllerMapper;
     private final RCModbusConfigRepository modbusConfigRepository;
     private final RCSchedulerMapper rcSchedulerMapper;
+    private final RCMqttMapper rcMqttMapper;
     public RCConfigMapper(RelayControllerMapper relayControllerMapper,
                           RCModbusConfigRepository modbusConfigRepository,
-                          RCSchedulerMapper rcSchedulerMapper) {
+                          RCSchedulerMapper rcSchedulerMapper,
+                          RCMqttMapper rcMqttMapper) {
         this.relayControllerMapper = relayControllerMapper;
         this.modbusConfigRepository = modbusConfigRepository;
         this.rcSchedulerMapper = rcSchedulerMapper;
+        this.rcMqttMapper = rcMqttMapper;
     }
 
     private NetworkConfigDTO networkToDto(NetworkConfig networkConfig) {
@@ -110,6 +109,8 @@ public class RCConfigMapper {
         rcConfigDTO.setNetwork(networkToDto(controller.getNetworkConfig()));
         // scheduler
         rcConfigDTO.setScheduler(rcSchedulerMapper.toDto(controller.getScheduler()));
+        // mqtt
+        rcConfigDTO.setMqtt(rcMqttMapper.toDto(controller.getMqtt()));
         return rcConfigDTO;
     }
 }

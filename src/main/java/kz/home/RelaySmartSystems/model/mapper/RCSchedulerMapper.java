@@ -1,10 +1,7 @@
 package kz.home.RelaySmartSystems.model.mapper;
 
-import kz.home.RelaySmartSystems.model.dto.RCInputDTO;
-import kz.home.RelaySmartSystems.model.dto.RCOutputDTO;
 import kz.home.RelaySmartSystems.model.dto.RCSchedulerDTO;
-import kz.home.RelaySmartSystems.model.relaycontroller.*;
-import org.apache.commons.beanutils.BeanUtils;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;

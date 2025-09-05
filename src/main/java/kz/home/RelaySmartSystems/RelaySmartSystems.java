@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 //@EnableJpaRepositories(basePackages = "kz.home")
 @EnableJpaAuditing
 @EnableScheduling
-@EntityScan(basePackages = {"kz.home.RelaySmartSystems.model", "kz.home.RelaySmartSystems.model.relaycontroller"})
+@EntityScan(basePackages = {"kz.home.RelaySmartSystems.model", "kz.home.RelaySmartSystems.model.entity.relaycontroller"})
 //@SpringBootApplication(exclude = {SecurityAutoConfiguration.class })
 @SpringBootApplication
 public class RelaySmartSystems {

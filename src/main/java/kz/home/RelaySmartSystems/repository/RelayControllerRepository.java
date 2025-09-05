@@ -1,7 +1,7 @@
 package kz.home.RelaySmartSystems.repository;
 
-import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.relaycontroller.RelayController;
+import kz.home.RelaySmartSystems.model.entity.User;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.RelayController;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
