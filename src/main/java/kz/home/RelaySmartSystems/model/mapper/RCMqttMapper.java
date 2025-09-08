@@ -13,6 +13,8 @@ import java.util.List;
 @Service
 public class RCMqttMapper {
     public RCMqtt toEntity(RCMqttDTO rcMqttDTO) {
+        if (rcMqttDTO == null)
+            return null;
         RCMqtt rcMqtt = new RCMqtt();
         rcMqtt.setUrl(rcMqttDTO.getUrl());
         rcMqtt.setEnabled(rcMqtt.isEnabled());
@@ -44,6 +46,8 @@ public class RCMqttMapper {
     }
 
     public RCMqttDTO toDto(RCMqtt rcMqtt) {
+        if (rcMqtt == null)
+            return null;
         RCMqttDTO dto = new RCMqttDTO();
         dto.setUrl(rcMqtt.getUrl());
         dto.setEnabled(rcMqtt.isEnabled());

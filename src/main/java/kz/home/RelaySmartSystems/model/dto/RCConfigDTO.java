@@ -12,6 +12,7 @@ public class RCConfigDTO {
     private String name;
     private String description;
     private String model;
+    private String status;
     private RCIOConfigDTO io;
     private RCModbusConfigDTO modbus;
     private NetworkConfigDTO network;

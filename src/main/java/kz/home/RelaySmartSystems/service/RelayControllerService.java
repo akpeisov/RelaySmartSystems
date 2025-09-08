@@ -419,6 +419,7 @@ public class RelayControllerService {
         return "{}";
     }
 
+    @Transactional
     public String getIOStates(String mac) {
         RelayController relayController = relayControllerRepository.findByMac(mac);
         if (relayController == null)

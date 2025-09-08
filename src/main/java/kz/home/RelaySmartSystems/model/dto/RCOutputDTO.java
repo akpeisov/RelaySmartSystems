@@ -30,21 +30,9 @@ public class RCOutputDTO {
     private Integer on;
     private Integer off;
     private Integer slaveId;
-    private String outputID;
 
     public Integer getSlaveId() {
         return slaveId == null ? 0 : slaveId;
-    }
-
-    public String getOutputID() {
-        return String.format("s%do%d", getSlaveId(), this.id);
-    }
-
-    public RCOutputDTO(UUID uuid, Integer id, String name, Integer slaveId) {
-        this.uuid = uuid;
-        this.id = id;
-        this.name = name;
-        this.slaveId = slaveId;
     }
 
     public RCOutputDTO(UUID uuid, Integer id, String name, Long limit, String type, String _default, String state, Boolean alice, String room, Integer on, Integer off) {

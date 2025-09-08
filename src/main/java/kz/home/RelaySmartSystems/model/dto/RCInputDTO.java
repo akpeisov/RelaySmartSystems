@@ -30,11 +30,4 @@ public class RCInputDTO {
         this.state = state;
         this.events = events;
     }
-
-    public RCInputDTO(UUID uuid, Integer id, String name, Integer slaveId) {
-        this.uuid = uuid;
-        this.id = id;
-        this.name = name;
-        this.slaveId = slaveId;
-    }
 }
