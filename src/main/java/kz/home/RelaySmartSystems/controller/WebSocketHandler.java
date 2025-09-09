@@ -315,6 +315,30 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
+            case "SETNETWORKCONFIG":
+                // сохранение network config
+                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                    NetworkConfigDTO networkConfigDTO = objectMapper.readValue(json, NetworkConfigDTO.class);
+                    relayControllerService.saveNetworkConfig(networkConfigDTO);
+                }
+                break;
+
+            case "SETMQTTCONFIG":
+                // сохранение network config
+                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                    RCMqttDTO rcMqttDTO = objectMapper.readValue(json, RCMqttDTO.class);
+                    relayControllerService.saveMqttConfig(rcMqttDTO);
+                }
+                break;
+
+            case "SETSCHEDULERCONFIG":
+                // сохранение scheduler config
+                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                    RCSchedulerDTO rcSchedulerDTO = objectMapper.readValue(json, RCSchedulerDTO.class);
+                    relayControllerService.saveSchedulerConfig(rcSchedulerDTO);
+                }
+                break;
+
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Command command = objectMapper.readValue(json, Command.class);

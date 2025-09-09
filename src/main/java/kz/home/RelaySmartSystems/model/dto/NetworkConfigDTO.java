@@ -8,7 +8,8 @@ import java.util.UUID;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NetworkConfigDTO {
-    private UUID id;
+    //private UUID id;
+    private String mac;
     private String ntpServer;
     private String ntpTZ;
     private String otaURL;

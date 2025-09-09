@@ -41,6 +41,7 @@ public class RelayControllerService {
     private final RCMqttMapper rcMqttMapper;
     private final RCMqttRepository rcMqttRepository;
     private static final Logger logger = LoggerFactory.getLogger(RelayControllerService.class);
+
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
                                   RCOutputRepository outputRepository,
                                   RCInputRepository inputRepository,
@@ -126,7 +127,102 @@ public class RelayControllerService {
         }
     }
 
+    // отдельные сервисы сохранения для модбас, сети, mqtt
+    public void saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO, String mac) {
+        RelayController relayController = relayControllerRepository.findByMac(mac);
+        saveMBConfig(rcModbusConfigDTO, relayController);
+    }
+
+    public void saveNetworkConfig(NetworkConfigDTO networkConfigDTO) {
+        RelayController relayController = relayControllerRepository.findByMac(networkConfigDTO.getMac());
+        saveNetworkConfig(networkConfigDTO, relayController);
+    }
+
+    public void saveSchedulerConfig(RCSchedulerDTO rcSchedulerDTO) {
+        RelayController relayController = relayControllerRepository.findByMac(rcSchedulerDTO.getMac());
+        saveSchedulerConfig(rcSchedulerDTO, relayController);
+    }
+
+    public void saveMqttConfig(RCMqttDTO rcMqttDTO) {
+        RelayController relayController = relayControllerRepository.findByMac(rcMqttDTO.getMac());
+        saveMqttConfig(rcMqttDTO, relayController);
+    }
+
+    private void saveMqttConfig(RCMqttDTO rcMqttDTO,
+                                RelayController relayController) {
+        if (rcMqttDTO == null)
+            return;
+        RCMqtt rcMqtt = rcMqttMapper.toEntity(rcMqttDTO);
+        rcMqtt.setController(relayController);
+        rcMqttRepository.save(rcMqtt);
+    }
+
+    private void saveSchedulerConfig(RCSchedulerDTO rcSchedulerDTO,
+                                     RelayController relayController) {
+        if (rcSchedulerDTO == null)
+            return;
+        RCScheduler rcScheduler = rcSchedulerMapper.toEntity(rcSchedulerDTO);
+        rcScheduler.setController(relayController);
+        rcSchedulerRepository.save(rcScheduler);
+    }
+
+    private void saveNetworkConfig(NetworkConfigDTO networkConfigDTO,
+                                   RelayController relayController) {
+        NetworkConfig networkConfig = networkConfigMapper.fromDto(networkConfigDTO);
+        networkConfig.setController(relayController);
+        networkConfigRepository.save(networkConfig);
+    }
+
+    private void saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO,
+                             RelayController relayController) {
+        if (rcModbusConfigDTO == null)
+            return;
+
+        RCModbusConfig rcModbusConfig = RelayControllerMapper.mbConfigToEntity(rcModbusConfigDTO);
+        rcModbusConfig.setController(relayController);
+        rcModbusConfigRepository.save(rcModbusConfig);
+
+        if ("master".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
+            // find all slaves
+            List<Integer> slaveIds = new ArrayList<>();
+            for (RCModbusConfig modbusConfig : rcModbusConfigRepository.findByMaster(relayController.getMac())) {
+                slaveIds.add(modbusConfig.getSlaveId());
+                // add outputs and inputs
+                List<RCOutput> rcOutputs = new ArrayList<>();
+                for (RCOutput rcOutputSlave : modbusConfig.getController().getOutputs()) {
+                    RCOutput rcOutput = new RCOutput();
+                    rcOutput.setRelayController(relayController);
+                    rcOutput.setSlaveId(modbusConfig.getSlaveId());
+                    rcOutput.setId(rcOutputSlave.getId());
+                    rcOutput.setName(rcOutputSlave.getName());
+                    rcOutput.setType(rcOutputSlave.getType());
+                    rcOutputs.add(rcOutput);
+                }
+                List<RCOutput> existedOutputs = relayController.getOutputs();
+                existedOutputs.addAll(rcOutputs);
+                relayController.setOutputs(existedOutputs);
+            }
+
+            // remove all not in slaveIds
+            relayController.getInputs()
+                    .removeIf(input -> input.getSlaveId() > 0 && !slaveIds.contains(input.getSlaveId()));
+            relayController.getOutputs()
+                    .removeIf(output -> output.getSlaveId() > 0 && !slaveIds.contains(output.getSlaveId()));
+
+            relayControllerRepository.save(relayController);
+
+            // хорошо бы сохранить локальные правила на слейвах
+        } else {
+            // у слейвов или без modbus не может быть дочерних IO
+            relayController.getInputs().removeIf(input -> input.getSlaveId() > 0);
+            relayController.getOutputs().removeIf(output -> output.getSlaveId() > 0);
+            relayControllerRepository.save(relayController);
+        }
+
+    }
+
     public void saveRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
+        // only for new RC
         // find existing RC
         String mac = rcConfigDTO.getMac();
         if (mac == null) {
@@ -144,45 +240,16 @@ public class RelayControllerService {
         relayControllerRepository.save(relayController);
 
         // modbus
-        if (rcConfigDTO.getModbus() != null) {
-            RCModbusConfig rcModbusConfig = getRcModbusConfig(rcConfigDTO, relayController);
-            rcModbusConfigRepository.save(rcModbusConfig);
-        }
+        saveMBConfig(rcConfigDTO.getModbus(), relayController);
 
         // network
-        NetworkConfig networkConfig = networkConfigMapper.fromDto(rcConfigDTO.getNetwork());
-        networkConfig.setController(relayController);
-        networkConfigRepository.save(networkConfig);
+        saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);
 
         // scheduler
-        RCScheduler rcScheduler = rcSchedulerMapper.toEntity(rcConfigDTO.getScheduler());
-        rcScheduler.setController(relayController);
-        rcSchedulerRepository.save(rcScheduler);
+        saveSchedulerConfig(rcConfigDTO.getScheduler(), relayController);
 
         // mqtt
-        RCMqtt rcMqtt = rcMqttMapper.toEntity(rcConfigDTO.getMqtt());
-        rcMqtt.setController(relayController);
-        rcMqttRepository.save(rcMqtt);
-    }
-
-    private static RCModbusConfig getRcModbusConfig(RCConfigDTO rcConfigDTO, RelayController relayController) {
-        RCModbusConfig rcModbusConfig = new RCModbusConfig();
-        rcModbusConfig.setController(relayController);
-        RCModbusConfigDTO rcModbusInfoDTO = rcConfigDTO.getModbus();
-        if ("master".equalsIgnoreCase(rcModbusInfoDTO.getMode())) {
-            rcModbusConfig.setMode(ModbusMode.master);
-            rcModbusConfig.setMaxRetries(rcModbusInfoDTO.getMaxRetries());
-            rcModbusConfig.setPollingTime(rcModbusInfoDTO.getPollingTime());
-            rcModbusConfig.setReadTimeout(rcModbusInfoDTO.getReadTimeout());
-            rcModbusConfig.setActionOnSameSlave(rcModbusInfoDTO.getActionOnSameSlave());
-        } else if ("slave".equalsIgnoreCase(rcModbusInfoDTO.getMode())) {
-            rcModbusConfig.setMode(ModbusMode.slave);
-            rcModbusConfig.setSlaveId(rcModbusInfoDTO.getSlaveId());
-            rcModbusConfig.setMaster(rcModbusInfoDTO.getMaster());
-        }
-        //BeanUtils.copyProperties(rcModbusConfig, rcConfigDTO.getModbus());
-        rcModbusConfig.setController(relayController);
-        return rcModbusConfig;
+        saveMqttConfig(rcConfigDTO.getMqtt(), relayController);
     }
 
     public String makeDeviceConfig(String mac) {

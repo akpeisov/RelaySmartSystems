@@ -15,6 +15,7 @@ import java.util.Set;
 public class RCSchedulerDTO {
     private boolean enabled;
     private List<RCTaskDTO> tasks;
+    private String mac;
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)

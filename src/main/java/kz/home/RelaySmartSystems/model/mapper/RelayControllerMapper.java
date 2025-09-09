@@ -191,5 +191,22 @@ public class RelayControllerMapper {
         rcUpdateIODTO.setInputs(rcStates);
         return rcUpdateIODTO;
     }
+
+    public static RCModbusConfig mbConfigToEntity(RCModbusConfigDTO rcModbusConfigDTO) {
+        RCModbusConfig rcModbusConfig = new RCModbusConfig();
+        //rcModbusConfig.setController(relayController);
+        if ("master".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
+            rcModbusConfig.setMode(ModbusMode.master);
+            rcModbusConfig.setMaxRetries(rcModbusConfigDTO.getMaxRetries());
+            rcModbusConfig.setPollingTime(rcModbusConfigDTO.getPollingTime());
+            rcModbusConfig.setReadTimeout(rcModbusConfigDTO.getReadTimeout());
+            rcModbusConfig.setActionOnSameSlave(rcModbusConfigDTO.getActionOnSameSlave());
+        } else if ("slave".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
+            rcModbusConfig.setMode(ModbusMode.slave);
+            rcModbusConfig.setSlaveId(rcModbusConfigDTO.getSlaveId());
+            rcModbusConfig.setMaster(rcModbusConfigDTO.getMaster());
+        }
+        return rcModbusConfig;
+    }
 }
 

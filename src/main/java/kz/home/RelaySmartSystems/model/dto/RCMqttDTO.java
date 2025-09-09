@@ -13,6 +13,7 @@ public class RCMqttDTO {
     private boolean enabled;
     private String url;
     private List<RCMqttTopicDTO> topics;
+    private String mac;
 
     @Data
     public static class RCMqttTopicDTO {
