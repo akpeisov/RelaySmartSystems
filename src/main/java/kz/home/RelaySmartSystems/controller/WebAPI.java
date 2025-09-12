@@ -121,7 +121,7 @@ public class WebAPI {
         if (controller.getUser() != null) {
             // уже есть какой-то юзер, что делаем?
             // если это этот же юзер или другой???
-            if (controller.getUser().getId().equals(username)) {
+            if (controller.getUser().getUsername().equals(username)) {
                 return ResponseEntity.status(400).body(new CResponse("Already linked"));
             } else {
                 return ResponseEntity.status(400).body(new CResponse("Already linked to another user"));
@@ -161,7 +161,7 @@ public class WebAPI {
         if (controller.getUser() != null) {
             // уже есть какой-то юзер, что делаем?
             // если это этот же юзер или другой???
-            if (controller.getUser().getId().equals(username)) {
+            if (controller.getUser().getUsername().equals(username)) {
                 controllerService.unlinkController(cRequest.getMac(), controller.getUser());
                 return ResponseEntity.ok().body(new CResponse("Device unlinked"));
             } else {

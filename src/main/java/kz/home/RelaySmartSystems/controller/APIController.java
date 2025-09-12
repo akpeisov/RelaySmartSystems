@@ -2,7 +2,10 @@ package kz.home.RelaySmartSystems.controller;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import kz.home.RelaySmartSystems.Utils;
+import kz.home.RelaySmartSystems.model.alice.AliceRequestLog;
 import kz.home.RelaySmartSystems.model.entity.User;
+import kz.home.RelaySmartSystems.repository.AliceRequestLogRepository;
 import kz.home.RelaySmartSystems.repository.RelayControllerRepository;
 import kz.home.RelaySmartSystems.repository.UserRepository;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
@@ -17,6 +20,7 @@ import java.security.KeyFactory;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping(value = "/api")
@@ -25,6 +29,7 @@ public class APIController {
     private final UserRepository userRepository;
     private final RelayControllerRepository relayControllerRepository;
     private final RelayControllerService relayControllerService;
+    private final AliceRequestLogRepository aliceRequestLogRepository;
 
     //    private final ModelMapper modelMapper;
 //    public APIController(UserRepository userRepository,
@@ -67,10 +72,13 @@ public class APIController {
             //"-----END PRIVATE KEY-----";
 
     public APIController(UserRepository userRepository,
-                         RelayControllerRepository relayControllerRepository, RelayControllerService relayControllerService) {
+                         RelayControllerRepository relayControllerRepository,
+                         RelayControllerService relayControllerService,
+                         AliceRequestLogRepository aliceRequestLogRepository) {
         this.userRepository = userRepository;
         this.relayControllerRepository = relayControllerRepository;
         this.relayControllerService = relayControllerService;
+        this.aliceRequestLogRepository = aliceRequestLogRepository;
     }
 
     @GetMapping("/users")
@@ -134,4 +142,10 @@ public class APIController {
 //        newRelayController.setOutputs(newOutputs);
 //        return newRelayController;
 //    }
+
+
+    @GetMapping(path = "/alog", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<AliceRequestLog> getAliceRequestLogs() {
+        return aliceRequestLogRepository.findAll();
+    }
 }

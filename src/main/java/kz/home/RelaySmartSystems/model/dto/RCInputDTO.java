@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -20,9 +21,9 @@ public class RCInputDTO {
     private String type;
     private String state;
     private Integer slaveId;
-    private Set<RCEventDTO> events;
+    private List<RCEventDTO> events;
 
-    public RCInputDTO(UUID uuid, Integer id, String name, String type, String state, Set<RCEventDTO> events) {
+    public RCInputDTO(UUID uuid, Integer id, String name, String type, String state, List<RCEventDTO> events) {
         this.uuid = uuid;
         this.id = id;
         this.name = name;

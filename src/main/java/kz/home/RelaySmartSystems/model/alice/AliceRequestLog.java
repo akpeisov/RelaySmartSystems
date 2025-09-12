@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.util.Date;
+import java.util.UUID;
 
 @Entity
 @NoArgsConstructor
@@ -15,7 +16,7 @@ import java.util.Date;
 public class AliceRequestLog {
     @Id
     @GeneratedValue
-    private Long id;
+    private UUID uuid;
     private Date datetime;
     @Column(length = 100)
     private String method;

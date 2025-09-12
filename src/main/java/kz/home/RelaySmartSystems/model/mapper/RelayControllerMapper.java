@@ -37,13 +37,13 @@ public class RelayControllerMapper {
     }
 
     private RCEventDTO mapEvent(RCEvent event) {
-        Set<RCActionDTO> actions = event.getActions().stream()
+        List<RCActionDTO> actions = event.getActions().stream()
                 .map(this::mapAction)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
-        Set<RCAclDTO> acls = event.getAcls().stream()
+        List<RCAclDTO> acls = event.getAcls().stream()
                 .map(this::mapAcl)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
 
         return new RCEventDTO(
                 event.getUuid(),
@@ -62,7 +62,7 @@ public class RelayControllerMapper {
                 input.getState(),
                 input.getEvents().stream()
                         .map(this::mapEvent)
-                        .collect(Collectors.toSet())
+                        .collect(Collectors.toList())
         );
     }
 
@@ -106,6 +106,7 @@ public class RelayControllerMapper {
         relayController.setDescription(rcConfigDTO.getDescription());
         relayController.setModel(rcConfigDTO.getModel());
         relayController.setType("relayController");
+        relayController.setCrc(rcConfigDTO.getCrc());
 
         // outputs
         List<RCOutput> outputs = new ArrayList<>();
@@ -137,7 +138,7 @@ public class RelayControllerMapper {
                     newEvent.setInput(input);
                     // actions
                     if (eventDTO.getActions() != null) {
-                        Set<RCAction> newActions = new HashSet<>();
+                        List<RCAction> newActions = new ArrayList<>();
                         for (RCActionDTO action : eventDTO.getActions()) {
                             RCAction newAction = new RCAction();
                             BeanUtils.copyProperties(newAction, action);
@@ -148,7 +149,7 @@ public class RelayControllerMapper {
                     }
                     // acls
                     if (eventDTO.getAcls() != null) {
-                        Set<RCAcl> newAcls = new HashSet<>();
+                        List<RCAcl> newAcls = new ArrayList<>();
                         for (RCAclDTO acl : eventDTO.getAcls()) {
                             RCAcl newAcl = new RCAcl();
                             BeanUtils.copyProperties(newAcl, acl);

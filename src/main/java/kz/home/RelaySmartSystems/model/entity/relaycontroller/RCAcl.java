@@ -1,6 +1,5 @@
 package kz.home.RelaySmartSystems.model.entity.relaycontroller;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,12 +20,7 @@ public class RCAcl {
     Integer id;
     String io;
     String state;
-    @JsonBackReference
     @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "event_uuid", nullable=false)
     RCEvent event;
-
-    public String getCompareId() {
-        return String.format("%d%s%s%s", id, type, io, state);
-    }
 }

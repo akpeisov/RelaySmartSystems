@@ -14,7 +14,6 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "controllers")
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
 @EntityListeners(AuditingEntityListener.class)
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Controller {
@@ -38,7 +37,7 @@ public class Controller {
     private String ethIP;
     private String wifiIP;
     private Integer wifiRSSI;
-    private long configTime;
+    private Long crc;
     private String model;
     @LastModifiedDate
     private Date lastSeen;

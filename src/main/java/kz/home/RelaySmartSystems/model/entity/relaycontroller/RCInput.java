@@ -1,6 +1,5 @@
 package kz.home.RelaySmartSystems.model.entity.relaycontroller;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,7 +22,6 @@ public class RCInput {
     private Integer slaveId = 0;
     @OneToMany(mappedBy = "input", cascade = CascadeType.ALL)
     private List<RCEvent> events;
-    @JsonBackReference
     @JoinColumn(name = "relay_controller_uuid", nullable=false)
     @ManyToOne(optional = false)
     private RelayController relayController;

@@ -42,15 +42,22 @@ public class AliceController {
         this.relayControllerService = relayControllerService;
     }
 
+    private String getIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Real-IP");
+        if (ip == null)
+            ip = request.getRemoteAddr();
+        return ip;
+    }
+
     @GetMapping("")
     public void head(HttpServletRequest request) {
         // Проверка доступности Endpoint URL провайдера
-        aliceRequestLogService.writeLog("head", request.getHeader("X-Real-IP"), "", "", "", "");
+        aliceRequestLogService.writeLog("head", getIp(request), "", "", "", "");
     }
 
     @PostMapping(path = "/user/unlink", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> unlink(HttpServletRequest request, @RequestHeader("X-Request-Id") String requestId) {
-        aliceRequestLogService.writeLog("unlink", request.getHeader("X-Real-IP"), requestId,
+        aliceRequestLogService.writeLog("unlink", getIp(request), requestId,
                 (String)request.getAttribute("username"), (String)request.getAttribute("token"), "");
         // POST	/v1.0/user/unlink	Оповещение о разъединении аккаунтов
         //-H 'Authorization: Bearer 123qwe456a...' \
@@ -66,43 +73,34 @@ public class AliceController {
                                         @RequestHeader(value = "X-Request-Id", required = false) String requestId) {
         // GET	/v1.0/user/devices	Информация об устройствах пользователя
         String username = (String) request.getAttribute("username");
-        logger.info(String.format("user devices. Username %s", username));
-        Long logId = aliceRequestLogService.writeLog("devices", request.getHeader("X-Real-IP"), requestId,
+        logger.info("user devices. Username {}", username);
+        UUID logId = aliceRequestLogService.writeLog("devices", getIp(request), requestId,
                 username, (String)request.getAttribute("token"),"");
-        if (username == null) {
-            aliceRequestLogService.setResponse(logId, "Username is null");
-            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "Username is null"));
-        }
-
-        User user = (User) userRepository.findById(username).orElse(null); // orElse avoid optional cast converion
+        User user = userRepository.findByUsername(username);
         if (user == null) {
-            logger.info(String.format("User with username %s not found", username));
-            aliceRequestLogService.setResponse(logId, String.format("User with username %s not found", username));
-            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
+            String msg = String.format("User %s not found", username);
+            aliceRequestLogService.setResponse(logId, msg);
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, msg));
         }
 
+/*
+        if (user == null) {
+            String msg = String.format("User with username %s not found", username);
+            logger.info(msg);
+            aliceRequestLogService.setResponse(logId, msg);
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, msg));
+        }
+*/
         // считаем все выходы контроллеров с признаком alice
         AliceDeviceResponse response = new AliceDeviceResponse();
         response.setRequestId(requestId);
         AlicePayload payload = new AlicePayload();
-        payload.setUserId(user.getId());
+   //     payload.setUserId(user.getId());
 
         List<AliceDevice> aliceDevices = new ArrayList<>();
         List<RCOutput> outputs = rcOutputRepository.getAliceOutputs(user);
         for (RCOutput rcOutput: outputs) {
-            AliceDevice aliceDevice = new AliceDevice();
-            aliceDevice.setId(rcOutput.getUuid().toString());
-            aliceDevice.setName(rcOutput.getName());
-            aliceDevice.setDescription(rcOutput.getName());
-            aliceDevice.setRoom(rcOutput.getRoom());
-            aliceDevice.setType("devices.types.light"); // считаем все лампами
-
-            AliceCapability aliceCapability = new AliceCapability();
-            aliceCapability.setType("devices.capabilities.on_off");
-            List<AliceCapability> aliceCapabilities = new ArrayList<>();
-            aliceCapabilities.add(aliceCapability);
-            aliceDevice.setAliceCapabilities(aliceCapabilities);
-            aliceDevices.add(aliceDevice);
+            aliceDevices.add(getAliceDevice(rcOutput));
         }
         payload.setDevices(aliceDevices);
         response.setPayload(payload);
@@ -111,17 +109,35 @@ public class AliceController {
         return ResponseEntity.ok().body(response);
     }
 
+    private static AliceDevice getAliceDevice(RCOutput rcOutput) {
+        AliceDevice aliceDevice = new AliceDevice();
+        aliceDevice.setId(rcOutput.getUuid().toString());
+        aliceDevice.setName(rcOutput.getName());
+        aliceDevice.setDescription(rcOutput.getName());
+        aliceDevice.setRoom(rcOutput.getRoom());
+        aliceDevice.setType("devices.types.light"); // считаем все лампами
+
+        AliceCapability aliceCapability = new AliceCapability();
+        aliceCapability.setType("devices.capabilities.on_off");
+        List<AliceCapability> aliceCapabilities = new ArrayList<>();
+        aliceCapabilities.add(aliceCapability);
+        aliceDevice.setAliceCapabilities(aliceCapabilities);
+        return aliceDevice;
+    }
+
     @PostMapping(path = "/user/devices/query", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<?> queryDevices(HttpServletRequest request,
                                           @RequestHeader(value = "X-Request-Id", required = false) String requestId,
                                           @RequestBody AliceDeviceStateRequest deviceStateRequest) {
         String username = (String) request.getAttribute("username");
-        logger.info(String.format("user devices query. Username %s", username));
-        Long logId = aliceRequestLogService.writeLog("devices query", request.getHeader("X-Real-IP"), requestId,
+        logger.info("user devices query. Username {}", username);
+        UUID logId = aliceRequestLogService.writeLog("devices/query",
+                getIp(request), requestId,
                 username, (String)request.getAttribute("token"), deviceStateRequest.toString());
         if (username == null) {
-            aliceRequestLogService.setResponse(logId, "Username is null");
-            return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
+            String msg = "Username is null";
+            aliceRequestLogService.setResponse(logId, msg);
+            return ResponseEntity.status(404).body(new AliceResponseError(requestId, msg));
         }
         User user = userRepository.findById(username).orElse(null); // orElse avoid optional cast converion
         if (user == null) {
@@ -174,8 +190,8 @@ public class AliceController {
                                           @RequestHeader(value = "X-Request-Id", required = false) String requestId,
                                           @RequestBody AliceDeviceActionRequest deviceActionRequest) {
         String username = (String) request.getAttribute("username");
-        logger.info(String.format("user devices action. Username %s", username));
-        Long logId = aliceRequestLogService.writeLog("devices query", request.getHeader("X-Real-IP"), requestId,
+        logger.info("user devices action. Username {}", username);
+        UUID logId = aliceRequestLogService.writeLog("devices query", request.getHeader("X-Real-IP"), requestId,
                 username, (String)request.getAttribute("token"), deviceActionRequest.toString());
         if (username == null) {
             aliceRequestLogService.setResponse(logId, "Username is null");
@@ -183,7 +199,7 @@ public class AliceController {
         }
         User user = (User) userRepository.findById(username).orElse(null); // orElse avoid optional cast converion
         if (user == null) {
-            logger.info(String.format("User with username %s not found", username));
+            logger.info("User with username {} not found", username);
             aliceRequestLogService.setResponse(logId, String.format("User with username %s not found", username));
             return ResponseEntity.status(404).body(new AliceResponseError(requestId, "User not found"));
         }

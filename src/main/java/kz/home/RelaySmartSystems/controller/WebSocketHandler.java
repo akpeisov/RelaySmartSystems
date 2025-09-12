@@ -102,17 +102,17 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 String token = hello.getToken();
                 TokenData tokenData = jwtAuthorizationFilter.validateToken(token, hello.getType());
                 if (tokenData.getErrorText() != null) {
-                    logger.error(String.format("Token error %s", tokenData.getErrorText()));
+                    logger.error("Token error {}", tokenData.getErrorText());
                     session.sendMessage(new TextMessage(errorMessage(String.format("Token error. %s. Closing connection.", tokenData.getErrorText()))));
                     session.close(CloseStatus.GOING_AWAY);
                     break;
                 }
                 wsSession.setType(hello.getType());
-                // TODO : убрать после теста
-                if (hello.getType().equalsIgnoreCase("WEB1"))
-                    wsSession.setType("WEB");
-                else if (hello.getType().equalsIgnoreCase("RC1"))
-                    wsSession.setType("relayController");
+    // TODO : убрать после теста
+    if (hello.getType().equalsIgnoreCase("WEB1"))
+        wsSession.setType("WEB");
+    else if (hello.getType().equalsIgnoreCase("RC1"))
+        wsSession.setType("relayController");
 
                 if (tokenData.getMac() != null) {
                     // Это контроллер
@@ -137,7 +137,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         wsSession.setUser(user);
                         //setUserForWSSession(session, user);
                     } else {
-                        logger.info(String.format("User by username not found %s", tokenData.getUsername()));
+                        logger.info("User by username not found {}", tokenData.getUsername());
                         session.sendMessage(new TextMessage(errorMessage("User not found!")));
                         session.close();
                         break;
@@ -228,7 +228,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     Message msg = objectMapper.readValue(json, Message.class);
                     if (msg.getMessage() != null) {
                         logger.info("SETDEVICECONFIG msg {}", msg.getMessage());
-                        //session.sendMessage(new TextMessage());
                         if ("OK".equalsIgnoreCase(msg.getMessage())) {
                             sendMessageToWebUser(wsSession.getUser(), successMessage("Upload successful"));
                         } else {
@@ -247,7 +246,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         logger.info("Sending message {} to controller {}", actionDTO.getAction(), actionDTO.getMac());
                         sendMessageToController(actionDTO.getMac(), wsTextMessage.makeMessage());
                     } else {
-                        logger.error("Action message to {} with incorrect owner {}", actionDTO.getMac(), wsSession.getUser().getId());
+                        logger.error("Action message to {} with incorrect owner {}", actionDTO.getMac(), wsSession.getUser().getUsername());
                     }
                 }
                 break;
@@ -255,7 +254,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "UPDATEOUTPUT":
                 // обновление выхода контроллера
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCUpdateOutputDTO rcUpdateOutputDTO = objectMapper.readValue(json, RCUpdateOutputDTO.class);
+                    RCOutputDTO rcUpdateOutputDTO = objectMapper.readValue(json, RCOutputDTO.class);
                     // обновление только в БД, конфиг потом руками на контроллер, пока только для relaycontroller
                     String res = relayControllerService.updateOutput(rcUpdateOutputDTO);
                     if ("OK".equalsIgnoreCase(res))
@@ -269,7 +268,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // обновление входа контроллера
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     // пока только для relaycontroller
-                    RCUpdateInputDTO rcUpdateInputDTO = objectMapper.readValue(json, RCUpdateInputDTO.class);
+                    RCInputDTO rcUpdateInputDTO = objectMapper.readValue(json, RCInputDTO.class);
                     String res = relayControllerService.updateInput(rcUpdateInputDTO);
                     if ("OK".equalsIgnoreCase(res))
                         wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
@@ -482,7 +481,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        logger.info("sendMessageToWebUser. User {}. Message {}", user.getId(), message);
+        logger.info("sendMessageToWebUser. User {}. Message {}", user.getUsername(), message);
 
         for (WSSession session: wsSessions) {
             if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {

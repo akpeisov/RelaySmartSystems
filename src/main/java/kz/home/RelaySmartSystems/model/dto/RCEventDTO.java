@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -15,6 +16,6 @@ import java.util.UUID;
 public class RCEventDTO {
     private UUID uuid;
     private String event;
-    private Set<RCActionDTO> actions;
-    private Set<RCAclDTO> acls;
+    private List<RCActionDTO> actions;
+    private List<RCAclDTO> acls;
 }

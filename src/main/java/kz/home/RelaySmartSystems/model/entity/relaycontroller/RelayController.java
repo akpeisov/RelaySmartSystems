@@ -13,9 +13,6 @@ import java.util.List;
 @NoArgsConstructor
 @Entity
 @Table(name = "rc_controllers")
-//@JsonIgnoreProperties(ignoreUnknown = true)
-//@JsonInclude(JsonInclude.Include.NON_EMPTY)
-//@DiscriminatorValue("RelayController")
 public class RelayController extends Controller {
     // mappedBy - имя "колонки" (точнее поля) в дочерней таблице, по которой будет связка с id данной
     @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL)

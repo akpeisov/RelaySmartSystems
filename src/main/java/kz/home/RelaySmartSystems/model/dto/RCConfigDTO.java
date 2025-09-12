@@ -1,11 +1,9 @@
 package kz.home.RelaySmartSystems.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RCConfigDTO {
     private String mac;
@@ -18,4 +16,5 @@ public class RCConfigDTO {
     private NetworkConfigDTO network;
     private RCSchedulerDTO scheduler;
     private RCMqttDTO mqtt;
+    private long crc;
 }

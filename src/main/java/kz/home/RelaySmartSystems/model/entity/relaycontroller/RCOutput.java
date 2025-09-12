@@ -1,6 +1,5 @@
 package kz.home.RelaySmartSystems.model.entity.relaycontroller;
 
-import com.fasterxml.jackson.annotation.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,7 +19,6 @@ public class RCOutput {
     private Long limit;
     private Long timer;
     private String type;
-    @JsonProperty("default")
     @Column(name = "default")
     private String _default;
     private String state;
@@ -30,7 +28,6 @@ public class RCOutput {
     private Integer off;
     private Integer slaveId = 0;
 
-    @JsonBackReference
     @ManyToOne(optional = false)  //(optional = false, cascade = CascadeType.ALL)
     @JoinColumn(name = "relay_controller_uuid", nullable=false)
     private RelayController relayController;

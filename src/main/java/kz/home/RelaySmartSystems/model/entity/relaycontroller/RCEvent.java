@@ -1,13 +1,11 @@
 package kz.home.RelaySmartSystems.model.entity.relaycontroller;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 @Setter
@@ -21,20 +19,14 @@ public class RCEvent {
     private UUID uuid;
     private String event;
 
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @OrderBy("order ASC")
-    private Set<RCAction> actions;
+    private List<RCAction> actions;
 
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private Set<RCAcl> acls;
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<RCAcl> acls;
 
     @JoinColumn(name = "input_uuid", nullable=false)
     @ManyToOne(optional = false)
     private RCInput input;
-
-    public RCEvent(String event, Set<RCAction> actions, Set<RCAcl> acls) {
-        this.event = event;
-        this.actions = actions;
-        this.acls = acls;
-    }
 }

@@ -35,7 +35,7 @@ public class UserService {
 
     public User addUser(String username, String firstname, String lastname) {
         User user = new User();
-        user.setId(username);
+        user.setUsername(username);
         user.setFirstName(firstname);
         user.setLastName(lastname);
         return userRepository.save(user);

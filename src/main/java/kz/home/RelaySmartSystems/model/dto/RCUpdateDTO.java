@@ -21,20 +21,4 @@ public class RCUpdateDTO {
     private Integer input;
     private Integer slaveId;
     private Integer timer;
-
-    public String makeMessage() {
-        Map<String, Object> objectMap = new HashMap<>();
-        objectMap.put("type", "UPDATE");
-        objectMap.put("payload", this);
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            return objectMapper.writeValueAsString(objectMap);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            return null;
-        }
-
-    }
-
 }

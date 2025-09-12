@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Repository
 public interface RelayControllerRepository extends JpaRepository<RelayController, UUID> {
-    List<RelayController> findByUser(User user);
+    //List<RelayController> findByUser(User user);
 //    RelayController findByMacIgnoreCase(String mac); // IgnoreCase якобы делает все сам, но и все вызовы должны быть соответствующие
     RelayController findByMac(String mac);
 }

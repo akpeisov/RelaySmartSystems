@@ -78,6 +78,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         request.setAttribute("token", token);
         TokenData tokenData = validateToken(token, "web");
         request.setAttribute("username", tokenData.getUsername());
+        if (tokenData.getUsername() == null) {
+            request.setAttribute("username", "user");
+        }
         request.setAttribute("errorText", tokenData.getErrorText());
         filterChain.doFilter(request, response);
     }
