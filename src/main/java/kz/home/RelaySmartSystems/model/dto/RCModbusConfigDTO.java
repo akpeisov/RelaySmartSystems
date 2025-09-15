@@ -13,6 +13,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RCModbusConfigDTO {
     private String mode; // master | slave
+    private String mac; // for controller identity
 
     // only for master
     private Integer pollingTime;

@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +56,7 @@ public class WebAPI {
         this.rcConfigMapper = rcConfigMapper;
     }
 
+//    @Transactional
     @GetMapping("/userDevices")
     public ResponseEntity<?> getUserDevices(HttpServletRequest request) {
         String username = (String) request.getAttribute("username");
@@ -62,15 +64,15 @@ public class WebAPI {
         if (username == null)
             username = "user";
 
-        User user = userService.findById(username).orElse(null); // orElse avoid optional cast conversion
-        if (user == null) {
-            // пользователь не найден. Заводим нового
-            user = userService.addUser(username, (String) request.getAttribute("firstname"), (String) request.getAttribute("lastname"));
-            if (user == null) {
-                logger.info(String.format("Can't create new user %s", username));
-                return ResponseEntity.status(400).body("Can't create new user");
-            }
-        }
+        User user = userService.findByUsername(username); // orElse avoid optional cast conversion
+//        if (user == null) {
+//            // пользователь не найден. Заводим нового
+//            user = userService.addUser(username, (String) request.getAttribute("firstname"), (String) request.getAttribute("lastname"));
+//            if (user == null) {
+//                logger.info(String.format("Can't create new user %s", username));
+//                return ResponseEntity.status(400).body("Can't create new user");
+//            }
+//        }
         // отдаем массив устройств
         List<Object> controllers = new ArrayList<>();
         List<Controller> userControllers = controllerService.getUserControllers(user);
@@ -128,7 +130,7 @@ public class WebAPI {
             }
         } else {
             // ищем юзера
-            User user = (User) userService.findById(username).orElse(null); // orElse avoid optional cast conversion
+            User user = (User) userService.findByUsername(username); // orElse avoid optional cast conversion
             if (user != null) {
                 String res = controllerService.linkController(cRequest.getMac(), user);
                 if ("OK".equals(res)) {

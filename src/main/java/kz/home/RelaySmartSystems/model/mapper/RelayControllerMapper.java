@@ -3,6 +3,7 @@ package kz.home.RelaySmartSystems.model.mapper;
 import kz.home.RelaySmartSystems.model.dto.*;
 import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
 import org.apache.commons.beanutils.BeanUtils;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
@@ -60,6 +61,7 @@ public class RelayControllerMapper {
                 input.getName(),
                 input.getType(),
                 input.getState(),
+                input.getSlaveId(),
                 input.getEvents().stream()
                         .map(this::mapEvent)
                         .collect(Collectors.toList())
@@ -68,7 +70,8 @@ public class RelayControllerMapper {
 
     public List<RCOutputDTO> outputsToDTO(List<RCOutput> outputs) {
         return new ArrayList<>(outputs.stream()
-                .map(o -> new RCOutputDTO(o.getUuid(), o.getId(), o.getName(), o.getLimit(), o.getType(), o.get_default(), o.getState(), o.getAlice(), o.getRoom(), o.getOn(), o.getOff()))
+                .map(o -> new RCOutputDTO(o.getUuid(), o.getId(), o.getName(), o.getLimit(), o.getType(),
+                        o.get_default(), o.getState(), o.getAlice(), o.getRoom(), o.getOn(), o.getOff(), o.getSlaveId()))
                 .toList());
     }
 
@@ -92,6 +95,8 @@ public class RelayControllerMapper {
             rcModbusConfigDTO.setMode("slave");
             rcModbusConfigDTO.setSlaveId(modbusInfo.getSlaveId());
             rcModbusConfigDTO.setMaster(modbusInfo.getMaster());
+        } else {
+            rcModbusConfigDTO.setMode("none");
         }
 
         return rcModbusConfigDTO;
@@ -195,7 +200,6 @@ public class RelayControllerMapper {
 
     public static RCModbusConfig mbConfigToEntity(RCModbusConfigDTO rcModbusConfigDTO) {
         RCModbusConfig rcModbusConfig = new RCModbusConfig();
-        //rcModbusConfig.setController(relayController);
         if ("master".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
             rcModbusConfig.setMode(ModbusMode.master);
             rcModbusConfig.setMaxRetries(rcModbusConfigDTO.getMaxRetries());
@@ -206,6 +210,14 @@ public class RelayControllerMapper {
             rcModbusConfig.setMode(ModbusMode.slave);
             rcModbusConfig.setSlaveId(rcModbusConfigDTO.getSlaveId());
             rcModbusConfig.setMaster(rcModbusConfigDTO.getMaster());
+        } else {
+            rcModbusConfig.setMode(ModbusMode.none);
+            rcModbusConfig.setMaxRetries(null);
+            rcModbusConfig.setPollingTime(null);
+            rcModbusConfig.setReadTimeout(null);
+            rcModbusConfig.setActionOnSameSlave(null);
+            rcModbusConfig.setSlaveId(null);
+            rcModbusConfig.setMaster(null);
         }
         return rcModbusConfig;
     }

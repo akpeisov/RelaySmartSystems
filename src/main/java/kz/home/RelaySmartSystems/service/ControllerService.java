@@ -29,6 +29,8 @@ public class ControllerService {
 
     public User findControllerOwner(String mac) {
         Controller c = controllerRepository.findByMac(mac.toUpperCase());
+        if (c == null)
+            return null;
         return c.getUser();
     }
 
@@ -91,8 +93,8 @@ public class ControllerService {
                 c.setVersion(info.getVersion());
                 c.setEthIP(info.getEthIP());
                 c.setWifiIP(info.getWifiIP());
-                c.setName(info.getName());
-                c.setDescription(info.getDescription());
+//                c.setName(info.getName());
+//                c.setDescription(info.getDescription());
                 c.setWifiRSSI(info.getWifiRSSI());
                 c.setModel(info.getModel());
                 c.setStatus("online");

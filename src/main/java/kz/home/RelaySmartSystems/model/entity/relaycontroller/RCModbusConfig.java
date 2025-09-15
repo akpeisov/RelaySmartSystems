@@ -32,4 +32,8 @@ public class RCModbusConfig {
     private Integer slaveId;
     private String master;
     private UUID masterUUID;
+
+    public Integer getSlaveId() {
+        return slaveId == null ? 0 : slaveId;
+    }
 }

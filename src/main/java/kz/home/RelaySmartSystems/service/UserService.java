@@ -18,20 +18,15 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public Optional<User> findById(String id) {
-        return userRepository.findById(id);
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username);
     }
-    public List<User> findAll() {
-        return userRepository.findAll();
-    }
+//    public Optional<User> findById(String id) {
+//        return userRepository.findById(id);
+//    }
 
-    public User saveUser(User user) {
-        return userRepository.save(user);
-    }
 
-    public User findByToken(String token) {
-        return userRepository.getOne(token);
-    }
+
 
     public User addUser(String username, String firstname, String lastname) {
         User user = new User();

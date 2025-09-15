@@ -129,8 +129,9 @@ public class RelayControllerService {
     }
 
     // отдельные сервисы сохранения для модбас, сети, mqtt
-    public void saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO, String mac) {
-        RelayController relayController = relayControllerRepository.findByMac(mac);
+    @Transactional
+    public void saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO) {
+        RelayController relayController = relayControllerRepository.findByMac(rcModbusConfigDTO.getMac());
         saveMBConfig(rcModbusConfigDTO, relayController);
     }
 
@@ -174,52 +175,113 @@ public class RelayControllerService {
         networkConfigRepository.save(networkConfig);
     }
 
+    private List<RCOutput> getNewMBOutputs(List<RCOutput> outputs, RelayController relayController, Integer slaveId) {
+        List<RCOutput> rcOutputs = new ArrayList<>();
+        for (RCOutput rcOutputSlave : outputs) {
+            if (relayController.getOutputs().stream()
+                    .anyMatch(rcOutput -> rcOutput.getId().equals(rcOutputSlave.getId()) &&
+                            rcOutput.getSlaveId().equals(slaveId))) {
+                // skip existing outputs
+                continue;
+            }
+            RCOutput rcOutput = new RCOutput();
+            rcOutput.setRelayController(relayController);
+            rcOutput.setSlaveId(slaveId);
+            rcOutput.setId(rcOutputSlave.getId());
+            rcOutput.setName(rcOutputSlave.getName());
+            rcOutput.setType(rcOutputSlave.getType());
+            rcOutputs.add(rcOutput);
+        }
+        return rcOutputs;
+    }
+
+    private List<RCInput> getNewMBInputs(List<RCInput> inputs, RelayController relayController, Integer slaveId) {
+        List<RCInput> rcInputs = new ArrayList<>();
+        for (RCInput rcInputSlave : inputs) {
+            if (rcInputSlave.getId() > 15)
+                continue;
+            if (relayController.getInputs().stream()
+                    .anyMatch(rcInput -> rcInput.getId().equals(rcInputSlave.getId()) &&
+                            rcInput.getSlaveId().equals(slaveId))) {
+                // skip existing inputs
+                continue;
+            }
+            RCInput rcInput = new RCInput();
+            rcInput.setRelayController(relayController);
+            rcInput.setSlaveId(slaveId);
+            rcInput.setId(rcInputSlave.getId());
+            rcInput.setName(rcInputSlave.getName());
+            rcInput.setType(rcInputSlave.getType());
+            rcInputs.add(rcInput);
+        }
+        return rcInputs;
+        // TODO : хорошо бы сохранить локальные правила на слейвах
+    }
+
     private void saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO,
                              RelayController relayController) {
         if (rcModbusConfigDTO == null)
             return;
 
+        UUID rcModbusConfigUUID = null;
+        RCModbusConfig config = rcModbusConfigRepository.findByController(relayController);
+        if (config != null) {
+            rcModbusConfigUUID = config.getUuid();
+        }
         RCModbusConfig rcModbusConfig = RelayControllerMapper.mbConfigToEntity(rcModbusConfigDTO);
+        rcModbusConfig.setUuid(rcModbusConfigUUID);
         rcModbusConfig.setController(relayController);
         rcModbusConfigRepository.save(rcModbusConfig);
 
         if ("master".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
-            // find all slaves
+            // find all slaves and add their io to master
             List<Integer> slaveIds = new ArrayList<>();
             for (RCModbusConfig modbusConfig : rcModbusConfigRepository.findByMaster(relayController.getMac())) {
                 slaveIds.add(modbusConfig.getSlaveId());
                 // add outputs and inputs
-                List<RCOutput> rcOutputs = new ArrayList<>();
-                for (RCOutput rcOutputSlave : modbusConfig.getController().getOutputs()) {
-                    RCOutput rcOutput = new RCOutput();
-                    rcOutput.setRelayController(relayController);
-                    rcOutput.setSlaveId(modbusConfig.getSlaveId());
-                    rcOutput.setId(rcOutputSlave.getId());
-                    rcOutput.setName(rcOutputSlave.getName());
-                    rcOutput.setType(rcOutputSlave.getType());
-                    rcOutputs.add(rcOutput);
-                }
+                List<RCOutput> rcOutputs = getNewMBOutputs(modbusConfig.getController().getOutputs(), relayController, modbusConfig.getSlaveId());
                 List<RCOutput> existedOutputs = relayController.getOutputs();
                 existedOutputs.addAll(rcOutputs);
                 relayController.setOutputs(existedOutputs);
+
+                List<RCInput> rcInputs = getNewMBInputs(modbusConfig.getController().getInputs(), relayController, modbusConfig.getSlaveId());
+                List<RCInput> existedInputs = relayController.getInputs();
+                existedInputs.addAll(rcInputs);
+                relayController.setInputs(existedInputs);
             }
 
-            // remove all not in slaveIds
+            // remove all io not in slaveIds
             relayController.getInputs()
                     .removeIf(input -> input.getSlaveId() > 0 && !slaveIds.contains(input.getSlaveId()));
             relayController.getOutputs()
                     .removeIf(output -> output.getSlaveId() > 0 && !slaveIds.contains(output.getSlaveId()));
 
             relayControllerRepository.save(relayController);
-
-            // хорошо бы сохранить локальные правила на слейвах
         } else {
             // у слейвов или без modbus не может быть дочерних IO
             relayController.getInputs().removeIf(input -> input.getSlaveId() > 0);
             relayController.getOutputs().removeIf(output -> output.getSlaveId() > 0);
             relayControllerRepository.save(relayController);
-        }
+            if ("slave".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
+                // TODO : если slaveId поменять то будет жопа, надо исправить, т.к. существующие io у мастера останутся и добавятся новые
+                // find master
+                RelayController master = relayControllerRepository.findByMac(rcModbusConfig.getMaster());
+                if (master == null) {
+                    logger.error("Master controller with mac {} not found", rcModbusConfig.getMaster());
+                    return;
+                }
+                List<RCOutput> rcOutputs = getNewMBOutputs(relayController.getOutputs(), master, rcModbusConfig.getSlaveId());
+                List<RCOutput> existedOutputs = master.getOutputs();
+                existedOutputs.addAll(rcOutputs);
+                master.setOutputs(existedOutputs);
 
+                List<RCInput> rcInputs = getNewMBInputs(relayController.getInputs(), master, rcModbusConfig.getSlaveId());
+                List<RCInput> existedInputs = master.getInputs();
+                existedInputs.addAll(rcInputs);
+                master.setInputs(existedInputs);
+                relayControllerRepository.save(master);
+            }
+        }
     }
 
     public void saveRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
@@ -253,6 +315,7 @@ public class RelayControllerService {
         saveMqttConfig(rcConfigDTO.getMqtt(), relayController);
     }
 
+    @Transactional
     public String makeDeviceConfig(String mac) {
         // формирование конфигурации устройства для отправки на устройство
         String json = "{}";

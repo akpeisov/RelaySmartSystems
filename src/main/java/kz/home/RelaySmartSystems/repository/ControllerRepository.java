@@ -5,11 +5,13 @@ import kz.home.RelaySmartSystems.model.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Repository
 public interface ControllerRepository extends JpaRepository<Controller, UUID> {
     Controller findByMac(String mac);
     List<Controller> findByUser(User user);
@@ -22,10 +24,6 @@ public interface ControllerRepository extends JpaRepository<Controller, UUID> {
     @Modifying
     @Transactional
     void setOffline();
-
-    // dialect 1111 not found
-//    @Procedure(procedureName = "setOffline")
-//    void setOffline2();
 }
 
 

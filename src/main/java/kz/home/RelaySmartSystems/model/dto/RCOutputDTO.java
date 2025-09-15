@@ -35,7 +35,8 @@ public class RCOutputDTO {
         return slaveId == null ? 0 : slaveId;
     }
 
-    public RCOutputDTO(UUID uuid, Integer id, String name, Long limit, String type, String _default, String state, Boolean alice, String room, Integer on, Integer off) {
+    public RCOutputDTO(UUID uuid, Integer id, String name, Long limit, String type, String _default,
+                       String state, Boolean alice, String room, Integer on, Integer off, Integer slaveId) {
         this.uuid = uuid;
         this.id = id;
         this.name = name;
@@ -47,5 +48,6 @@ public class RCOutputDTO {
         this.room = room;
         this.on = on;
         this.off = off;
+        this.slaveId = slaveId;
     }
 }

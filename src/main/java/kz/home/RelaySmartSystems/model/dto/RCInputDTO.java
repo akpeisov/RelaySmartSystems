@@ -23,12 +23,14 @@ public class RCInputDTO {
     private Integer slaveId;
     private List<RCEventDTO> events;
 
-    public RCInputDTO(UUID uuid, Integer id, String name, String type, String state, List<RCEventDTO> events) {
+    public RCInputDTO(UUID uuid, Integer id, String name, String type, String state, Integer slaveId,
+                      List<RCEventDTO> events) {
         this.uuid = uuid;
         this.id = id;
         this.name = name;
         this.type = type;
         this.state = state;
         this.events = events;
+        this.slaveId = slaveId;
     }
 }

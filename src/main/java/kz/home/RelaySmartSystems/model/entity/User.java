@@ -26,4 +26,9 @@ public class User {
         return this.firstName + " " + this.lastName;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        User u = (User)obj;
+        return username.equalsIgnoreCase(u.getUsername());
+    }
 }

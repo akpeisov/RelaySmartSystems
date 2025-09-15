@@ -83,19 +83,11 @@ public class AliceController {
             return ResponseEntity.status(404).body(new AliceResponseError(requestId, msg));
         }
 
-/*
-        if (user == null) {
-            String msg = String.format("User with username %s not found", username);
-            logger.info(msg);
-            aliceRequestLogService.setResponse(logId, msg);
-            return ResponseEntity.status(404).body(new AliceResponseError(requestId, msg));
-        }
-*/
         // считаем все выходы контроллеров с признаком alice
         AliceDeviceResponse response = new AliceDeviceResponse();
         response.setRequestId(requestId);
         AlicePayload payload = new AlicePayload();
-   //     payload.setUserId(user.getId());
+        payload.setUserId(user.getUsername());
 
         List<AliceDevice> aliceDevices = new ArrayList<>();
         List<RCOutput> outputs = rcOutputRepository.getAliceOutputs(user);

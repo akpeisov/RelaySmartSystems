@@ -132,7 +132,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     // Это клиент фронта
                     //setUsernameForWSSession(session, tokenData.getUsername());
                     wsSession.setUsername(tokenData.getUsername());
-                    User user = userService.findById(tokenData.getUsername()).orElse(null);
+                    User user = userService.findByUsername(tokenData.getUsername());
                     if (user != null) {
                         wsSession.setUser(user);
                         //setUserForWSSession(session, user);
@@ -316,15 +316,23 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
             case "SETNETWORKCONFIG":
                 // сохранение network config
-                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
                     NetworkConfigDTO networkConfigDTO = objectMapper.readValue(json, NetworkConfigDTO.class);
                     relayControllerService.saveNetworkConfig(networkConfigDTO);
                 }
                 break;
 
+            case "SETMODBUSCONFIG":
+                // сохранение network config
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    RCModbusConfigDTO rcModbusConfigDTO = objectMapper.readValue(json, RCModbusConfigDTO.class);
+                    relayControllerService.saveMBConfig(rcModbusConfigDTO);
+                }
+                break;
+
             case "SETMQTTCONFIG":
                 // сохранение network config
-                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
                     RCMqttDTO rcMqttDTO = objectMapper.readValue(json, RCMqttDTO.class);
                     relayControllerService.saveMqttConfig(rcMqttDTO);
                 }
@@ -332,7 +340,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
             case "SETSCHEDULERCONFIG":
                 // сохранение scheduler config
-                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
                     RCSchedulerDTO rcSchedulerDTO = objectMapper.readValue(json, RCSchedulerDTO.class);
                     relayControllerService.saveSchedulerConfig(rcSchedulerDTO);
                 }
@@ -442,8 +450,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
         if (sessionToDel != null)
             wsSessions.remove(sessionToDel);
+        if ("web".equalsIgnoreCase(type)) {
+            logger.info("Client {} disconnected with ID {}. Status {}", type, session.getId(), status);
+        } else {
+            logger.info("Client {} with mac {} disconnected", type, mac);
+        }
 
-        logger.info("Client {} disconnected with ID {}. Status {}", type, session.getId(), status);
         super.afterConnectionClosed(session, status);
     }
 
