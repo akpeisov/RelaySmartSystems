@@ -21,6 +21,7 @@ public class WifiConfig {
     private String ip;
     private String netmask;
     private String gateway;
+    private String dns;
     private String ssid;
     private String pass;
 }

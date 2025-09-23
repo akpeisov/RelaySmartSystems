@@ -13,6 +13,7 @@ import kz.home.RelaySmartSystems.model.entity.Controller;
 import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
+import kz.home.RelaySmartSystems.service.SessionService;
 import kz.home.RelaySmartSystems.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,17 +37,25 @@ public class WebSocketHandler extends TextWebSocketHandler {
     private final RelayControllerService relayControllerService;
     private final JwtAuthorizationFilter jwtAuthorizationFilter;
     private final UserService userService;
+    private final SessionService sessionService;
 
     public WebSocketHandler(ControllerService controllerService,
-                            RelayControllerService relayControllerService, JwtAuthorizationFilter jwtAuthorizationFilter, UserService userService) {
+                            RelayControllerService relayControllerService,
+                            JwtAuthorizationFilter jwtAuthorizationFilter,
+                            UserService userService,
+                            SessionService sessionService) {
         this.controllerService = controllerService;
         this.relayControllerService = relayControllerService;
         this.jwtAuthorizationFilter = jwtAuthorizationFilter;
         this.userService = userService;
+        this.sessionService = sessionService;
+
+        sessionService.endAllSessions();
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        sessionService.updateLastActive(session.getId());
         // Ищем текущую сессию в списке сессий
         WSSession wsSession = null;
         for (WSSession wsSession1 : wsSessions) {
@@ -118,6 +127,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     // Это контроллер
                     String mac = tokenData.getMac();
                     wsSession.setControllerId(mac);
+                    sessionService.setMac(session.getId(), mac);
                     // если контроллера нет, то запросить его конфиг
                     if (controllerService.findController(mac) == null) {
                         logger.info("Controller {} not found. Request config", mac);
@@ -131,6 +141,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 } else if (tokenData.getUsername() != null) {
                     // Это клиент фронта
                     //setUsernameForWSSession(session, tokenData.getUsername());
+                    sessionService.setUsername(session.getId(), tokenData.getUsername());
                     wsSession.setUsername(tokenData.getUsername());
                     User user = userService.findByUsername(tokenData.getUsername());
                     if (user != null) {
@@ -223,8 +234,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 break;
 
             case "SETDEVICECONFIG":
-                // результат обновления конфига от контроллера
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
+                    // результат обновления конфига от контроллера
                     Message msg = objectMapper.readValue(json, Message.class);
                     if (msg.getMessage() != null) {
                         logger.info("SETDEVICECONFIG msg {}", msg.getMessage());
@@ -234,6 +245,16 @@ public class WebSocketHandler extends TextWebSocketHandler {
                             sendMessageToWebUser(wsSession.getUser(), errorMessage("Upload to controller failed"));
                         }
                     }
+                } else {
+                    // обновление конфига контроллера с фронта
+                    RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
+                    logger.info(rcConfigDTO.getNetwork().getNtpServer());
+                    String res = relayControllerService.saveConfig(rcConfigDTO);
+                    if ("OK".equalsIgnoreCase(res))
+                        wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                    else
+                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
+                    // remove io
                 }
                 break;
 
@@ -314,37 +335,41 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
-            case "SETNETWORKCONFIG":
-                // сохранение network config
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    NetworkConfigDTO networkConfigDTO = objectMapper.readValue(json, NetworkConfigDTO.class);
-                    relayControllerService.saveNetworkConfig(networkConfigDTO);
-                }
-                break;
-
-            case "SETMODBUSCONFIG":
-                // сохранение network config
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCModbusConfigDTO rcModbusConfigDTO = objectMapper.readValue(json, RCModbusConfigDTO.class);
-                    relayControllerService.saveMBConfig(rcModbusConfigDTO);
-                }
-                break;
-
-            case "SETMQTTCONFIG":
-                // сохранение network config
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCMqttDTO rcMqttDTO = objectMapper.readValue(json, RCMqttDTO.class);
-                    relayControllerService.saveMqttConfig(rcMqttDTO);
-                }
-                break;
-
-            case "SETSCHEDULERCONFIG":
-                // сохранение scheduler config
-                if ("web".equalsIgnoreCase(wsSession.getType())) {
-                    RCSchedulerDTO rcSchedulerDTO = objectMapper.readValue(json, RCSchedulerDTO.class);
-                    relayControllerService.saveSchedulerConfig(rcSchedulerDTO);
-                }
-                break;
+//            case "SETNETWORKCONFIG":
+//                // сохранение network config
+//                if ("web".equalsIgnoreCase(wsSession.getType())) {
+//                    NetworkConfigDTO networkConfigDTO = objectMapper.readValue(json, NetworkConfigDTO.class);
+//                    relayControllerService.saveNetworkConfig(networkConfigDTO);
+//                }
+//                break;
+//
+//            case "SETMODBUSCONFIG":
+//                // сохранение network config
+//                if ("web".equalsIgnoreCase(wsSession.getType())) {
+//                    RCModbusConfigDTO rcModbusConfigDTO = objectMapper.readValue(json, RCModbusConfigDTO.class);
+//                    String res = relayControllerService.saveMBConfig(rcModbusConfigDTO);
+//                    if ("OK".equalsIgnoreCase(res))
+//                        wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
+//                    else
+//                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
+//                }
+//                break;
+//
+//            case "SETMQTTCONFIG":
+//                // сохранение network config
+//                if ("web".equalsIgnoreCase(wsSession.getType())) {
+//                    RCMqttDTO rcMqttDTO = objectMapper.readValue(json, RCMqttDTO.class);
+//                    relayControllerService.saveMqttConfig(rcMqttDTO);
+//                }
+//                break;
+//
+//            case "SETSCHEDULERCONFIG":
+//                // сохранение scheduler config
+//                if ("web".equalsIgnoreCase(wsSession.getType())) {
+//                    RCSchedulerDTO rcSchedulerDTO = objectMapper.readValue(json, RCSchedulerDTO.class);
+//                    relayControllerService.saveSchedulerConfig(rcSchedulerDTO);
+//                }
+//                break;
 
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
@@ -426,9 +451,13 @@ public class WebSocketHandler extends TextWebSocketHandler {
         // TODO : audit session
         WSSession wsSession = new WSSession(session);
         String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
-        wsSession.setClientIP(clientIpAddress == null ? Objects.requireNonNull(session.getRemoteAddress()).toString() : clientIpAddress);
+        if (clientIpAddress == null && session.getRemoteAddress() != null) {
+            clientIpAddress = session.getRemoteAddress().toString();
+        }
+        wsSession.setClientIP(clientIpAddress);
         wsSessions.add(wsSession);
         logger.info("New client connected with ID {} remote IP {} client IP {}", session.getId(), session.getRemoteAddress(), clientIpAddress);
+        sessionService.addSession(session.getId(), clientIpAddress);
         super.afterConnectionEstablished(session);
     }
 
@@ -436,6 +465,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         // find current controller and set offline
         // TODO : audit session
+        sessionService.endSession(session.getId());
         String mac = getControllerIdForWSSession(session);
         if (mac != null)
             controllerService.setControllerOffline(mac);

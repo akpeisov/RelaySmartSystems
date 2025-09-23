@@ -33,10 +33,12 @@ public class RCConfigMapper {
         networkConfigDTO.setNtpServer(networkConfig.getNtpServer());
         networkConfigDTO.setOtaURL(networkConfig.getOtaURL());
         // cloud
-        NetworkConfigDTO.CloudDto cloudDto = new NetworkConfigDTO.CloudDto();
-        cloudDto.setAddress(networkConfig.getCloud().getAddress());
-        cloudDto.setEnabled(networkConfig.getCloud().isEnabled());
-        networkConfigDTO.setCloud(cloudDto);
+        if (networkConfig.getCloud() != null) {
+            NetworkConfigDTO.CloudDto cloudDto = new NetworkConfigDTO.CloudDto();
+            cloudDto.setAddress(networkConfig.getCloud().getAddress());
+            cloudDto.setEnabled(networkConfig.getCloud().isEnabled());
+            networkConfigDTO.setCloud(cloudDto);
+        }
         // ftp
         if (networkConfig.getFtp() != null) {
             NetworkConfigDTO.FtpDto ftpDto = new NetworkConfigDTO.FtpDto();
@@ -54,6 +56,8 @@ public class RCConfigMapper {
     }
 
     private static NetworkConfigDTO.EthDto getEthDto(NetworkConfig networkConfig) {
+        if (networkConfig.getEth() == null)
+            return null;
         NetworkConfigDTO.EthDto ethDto = new NetworkConfigDTO.EthDto();
         ethDto.setIp(networkConfig.getEth().getIp());
         ethDto.setDhcp(networkConfig.getEth().isDhcp());
@@ -67,6 +71,8 @@ public class RCConfigMapper {
     }
 
     private static NetworkConfigDTO.WifiDto getWifiDto(NetworkConfig networkConfig) {
+        if (networkConfig.getWifi() == null)
+            return null;
         NetworkConfigDTO.WifiDto wifiDto = new NetworkConfigDTO.WifiDto();
         wifiDto.setIp(networkConfig.getWifi().getIp());
         wifiDto.setDhcp(networkConfig.getWifi().isDhcp());

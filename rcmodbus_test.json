@@ -1,10 +1,11 @@
 {"type": "HELLO",
 "payload": {
     "type": "WEB1",
-    "token": "123"
+    "token": "N12345678"
 }
 }
 
+// при сохранении мастера нужно взять ио со слейвов, остальные, если есть, удалить
 
 
 {"type": "DEVICECONFIG",
@@ -17,8 +18,6 @@
             "enabled": false,
             "url": "qwerty",
             "topics": [
-                // dev/outputs/slid/out  ACTION
-                // dev/inputs/slid/in  EVENT
                 {
                     "topic": "dev1/inputs/0/3",
                     "events": [
@@ -26,13 +25,14 @@
                             "event": "on",
                             "type": "output",
                             "output": 0,
-                            "action": "on"                        
+                            "action": "on",
+                            "slaveId": 5
                         },
                         {                        
-                            "event": "off",
-                            "type": "out",
-                            "output": 0,
-                            "action": "off"                        
+                            "event": "toggle",
+                            "type": "in",
+                            "input": 2,
+                            "action": "toggle"
                         }
                     ]
                 }
@@ -48,12 +48,12 @@
                 {
                     "slaveId": 1,
                     "model": "RCV2B",
-                    "mac": "111"
+                    "mac": "9876543210"
                 },
                 {
                     "slaveId": 2,
                     "model": "RCV2S",
-                    "mac": "222"
+                    "mac": "N222333"
                 }
             ]
         },
@@ -101,7 +101,7 @@
               "netmask": "255.255.255.0",
               "gateway": "192.168.2.1",
               "ssid": "devices",
-              "pass": "alanaDev1"
+              "pass": "123"
             },
             "ftp": {
               "enabled": false,

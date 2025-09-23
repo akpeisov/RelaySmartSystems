@@ -6,6 +6,43 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class NetworkConfigMapper {
+    public void cloudFromDto(CloudConfig cloud, NetworkConfigDTO.CloudDto dto) {
+        if (cloud == null || dto == null) return;
+        cloud.setAddress(dto.getAddress());
+        cloud.setEnabled(dto.isEnabled());
+    }
+
+    public void ethFromDto(EthConfig eth, NetworkConfigDTO.EthDto dto) {
+        if (eth == null || dto == null) return;
+        eth.setEnabled(dto.isEnabled());
+        eth.setDhcp(dto.isDhcp());
+        eth.setIp(dto.getIp());
+        eth.setNetmask(dto.getNetmask());
+        eth.setGateway(dto.getGateway());
+        eth.setDns(dto.getDns());
+        eth.setEnableReset(dto.isEnableReset());
+        eth.setResetGPIO(dto.getResetGPIO());
+    }
+
+    public void wifiFromDto(WifiConfig wifi, NetworkConfigDTO.WifiDto dto) {
+        if (dto == null || wifi == null) return;
+        wifi.setEnabled(dto.isEnabled());
+        wifi.setDhcp(dto.isDhcp());
+        wifi.setIp(dto.getIp());
+        wifi.setNetmask(dto.getNetmask());
+        wifi.setGateway(dto.getGateway());
+        wifi.setDns(dto.getDns());
+        wifi.setSsid(dto.getSsid());
+        wifi.setPass(dto.getPass());
+    }
+
+    public void ftpFromDto(FtpConfig ftp, NetworkConfigDTO.FtpDto dto) {
+        if (dto == null || ftp == null) return;
+        ftp.setEnabled(dto.isEnabled());
+        ftp.setUser(dto.getUser());
+        ftp.setPass(dto.getPass());
+    }
+
     public NetworkConfig fromDto(NetworkConfigDTO dto) {
         NetworkConfig entity = new NetworkConfig();
         entity.setNtpServer(dto.getNtpServer());
