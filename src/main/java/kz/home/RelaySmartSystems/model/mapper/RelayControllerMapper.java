@@ -130,7 +130,7 @@ public class RelayControllerMapper {
             input.setRelayController(relayController);
             //BeanUtils.copyProperties(input, inputDTO); // Cannot invoke kz.home.RelaySmartSystems.model.entity.relaycontroller.RCInput.setEvents - argument type mismatch
             input.setId(inputDTO.getId());
-            input.setName(inputDTO.getState());
+            input.setName(inputDTO.getName());
             input.setType(inputDTO.getType());
             input.setState(inputDTO.getState());
             input.setSlaveId(inputDTO.getSlaveId());

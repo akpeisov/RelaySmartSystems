@@ -247,14 +247,17 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     }
                 } else {
                     // обновление конфига контроллера с фронта
-                    RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
-                    logger.info(rcConfigDTO.getNetwork().getNtpServer());
-                    String res = relayControllerService.saveConfig(rcConfigDTO);
-                    if ("OK".equalsIgnoreCase(res))
-                        wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
-                    else
-                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
-                    // remove io
+                    try {
+                        RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
+                        String res = relayControllerService.saveConfig(rcConfigDTO);
+                        if ("OK".equalsIgnoreCase(res))
+                            wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                        else
+                            wsSession.sendMessage(new TextMessage(errorMessage(res)));
+                    } catch (Exception e) {
+                        logger.error(e.getLocalizedMessage());
+                        wsSession.sendMessage(new TextMessage(errorMessage("Wrong config format")));
+                    }
                 }
                 break;
 

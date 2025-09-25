@@ -131,28 +131,11 @@ public class RelayControllerService {
         res = saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);
         if (!"OK".equals(res))
             return res;
-        saveSchedulerConfig(rcConfigDTO.getScheduler(), relayController);
+        res = saveSchedulerConfig(rcConfigDTO.getScheduler(), relayController);
 //        saveMqttConfig(rcConfigDTO.getMqtt(), relayController);
         return res;
     }
 
-    // отдельные сервисы сохранения для модбас, сети, mqtt
-//    @Transactional
-//    public String saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO) {
-//        RelayController relayController = relayControllerRepository.findByMac(rcModbusConfigDTO.getMac());
-//        return saveMBConfig(rcModbusConfigDTO, relayController);
-//    }
-
-//    public void saveSchedulerConfig(RCSchedulerDTO rcSchedulerDTO) {
-//        RelayController relayController = relayControllerRepository.findByMac(rcSchedulerDTO.getMac());
-//        saveSchedulerConfig(rcSchedulerDTO, relayController);
-//    }
-//
-//    public void saveMqttConfig(RCMqttDTO rcMqttDTO) {
-//        RelayController relayController = relayControllerRepository.findByMac(rcMqttDTO.getMac());
-//        saveMqttConfig(rcMqttDTO, relayController);
-//    }
-//
     private void saveMqttConfig(RCMqttDTO rcMqttDTO,
                                 RelayController relayController) {
         if (rcMqttDTO == null)
@@ -162,13 +145,78 @@ public class RelayControllerService {
         rcMqttRepository.save(rcMqtt);
     }
 
-    private void saveSchedulerConfig(RCSchedulerDTO rcSchedulerDTO,
-                                     RelayController relayController) {
-        if (rcSchedulerDTO == null)
-            return;
-        RCScheduler rcScheduler = rcSchedulerMapper.toEntity(rcSchedulerDTO);
-        rcScheduler.setController(relayController);
-        rcSchedulerRepository.save(rcScheduler);
+    String saveSchedulerConfig(RCSchedulerDTO rcSchedulerDTO,
+                               RelayController relayController) {
+        if (rcSchedulerDTO == null || relayController == null)
+            return "NULL";
+        try {
+            RCScheduler existingScheduler = rcSchedulerRepository.findByController(relayController);
+            if (existingScheduler != null) {
+                // update existing
+                existingScheduler.setEnabled(rcSchedulerDTO.isEnabled());
+
+                // --- синхронизация задач ---
+                List<RCTask> existingTasks = existingScheduler.getTasks();
+                List<RCSchedulerDTO.RCTaskDTO> dtoTasks = rcSchedulerDTO.getTasks() != null ? rcSchedulerDTO.getTasks() : new ArrayList<>();
+
+                // Удаляем задачи, которых нет в DTO (по имени)
+                existingTasks.removeIf(task -> dtoTasks.stream().noneMatch(dto -> dto.getName() != null && dto.getName().equals(task.getName())));
+
+                // Обновляем существующие и добавляем новые задачи
+                for (RCSchedulerDTO.RCTaskDTO dtoTask : dtoTasks) {
+                    RCTask task = existingTasks.stream()
+                        .filter(t -> dtoTask.getName() != null && dtoTask.getName().equals(t.getName()))
+                        .findFirst()
+                        .orElse(null);
+                    if (task == null) {
+                        // новая задача
+                        task = new RCTask();
+                        task.setScheduler(existingScheduler);
+                        existingTasks.add(task);
+                    }
+                    // обновляем поля задачи
+                    task.setName(dtoTask.getName());
+                    task.setGrace(dtoTask.getGrace());
+                    task.setTime(dtoTask.getTime());
+                    task.setDone(dtoTask.isDone());
+                    task.setEnabled(dtoTask.isEnabled());
+                    task.setDow(dtoTask.getDow());
+
+                    // --- синхронизация действий задачи ---
+                    List<RCTaskAction> existingActions = task.getActions();
+                    List<RCSchedulerDTO.RCTaskActionDTO> dtoActions = dtoTask.getActions() != null ? dtoTask.getActions() : new ArrayList<>();
+                    // Удаляем действия, которых нет в DTO (по action и output)
+                    existingActions.removeIf(act -> dtoActions.stream().noneMatch(dto -> Objects.equals(dto.getAction(), act.getAction()) && Objects.equals(dto.getOutput(), act.getOutput())));
+                    // Обновляем существующие и добавляем новые действия
+                    for (RCSchedulerDTO.RCTaskActionDTO dtoAction : dtoActions) {
+                        RCTaskAction action = existingActions.stream()
+                            .filter(a -> Objects.equals(dtoAction.getAction(), a.getAction()) && Objects.equals(dtoAction.getOutput(), a.getOutput()))
+                            .findFirst()
+                            .orElse(null);
+                        if (action == null) {
+                            action = new RCTaskAction();
+                            action.setTask(task);
+                            existingActions.add(action);
+                        }
+                        action.setAction(dtoAction.getAction());
+                        action.setOutput(dtoAction.getOutput());
+                        action.setType(dtoAction.getType());
+                        action.setInput(dtoAction.getInput());
+                    }
+                }
+                rcSchedulerRepository.save(existingScheduler);
+                return "OK";
+            }
+
+            // если нет существующего планировщика, создаём новый
+            RCScheduler rcScheduler = rcSchedulerMapper.toEntity(rcSchedulerDTO);
+            rcScheduler.setController(relayController);
+            rcSchedulerRepository.save(rcScheduler);
+        } catch (Exception e) {
+            logger.error("Error while saving scheduler config", e);
+            return e.getLocalizedMessage();
+        }
+        return "OK";
     }
 
     private String saveNetworkConfig(NetworkConfigDTO networkConfigDTO,
