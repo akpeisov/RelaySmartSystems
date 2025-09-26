@@ -459,7 +459,7 @@ public class RelayControllerService {
                 objectMap.put("payload", relayControllerDTO);
 
                 json = Utils.getJson(objectMap);
-                json = Utils.removeFieldsJSON(json, "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
+                json = Utils.removeFieldsJSON(json, "uuid", "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
             }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage());
@@ -497,6 +497,7 @@ public class RelayControllerService {
         }
     }
 
+    @Transactional
     public String updateInput(RCInputDTO rcInputDTO) {
         // обновление сущности входа с фронта
         String result = "OK";

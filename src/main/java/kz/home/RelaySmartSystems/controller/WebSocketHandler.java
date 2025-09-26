@@ -209,7 +209,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     if (update.getOutput() != null) {
                         relayControllerService.setOutputState(wsSession.getControllerId(), update.getOutput(), update.getState(), update.getSlaveId());
                     } else if (update.getInput() != null) {
-                        if ((update.getInput() == 16) && ("long".equalsIgnoreCase(update.getState()))) {
+                        if ((update.getInput() == 16) && ("longpress".equalsIgnoreCase(update.getState()))) {
                             // event for link
                             // проверить есть ли запрос на линковку в веб сессии
                             WSSession linkSession = findSessionForLinkRequest(update.getMac());
@@ -217,6 +217,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                                 logger.info("Link request ok");
                                 if (controllerService.linkController(update.getMac(), linkSession.getUser()).equalsIgnoreCase("OK")) {
                                     linkSession.getSession().sendMessage(new TextMessage(WSTextMessage.send("LINKOK", null)));
+                                    wsSession.setUser(linkSession.getUser());
                                 }
                             }
                         } else {
