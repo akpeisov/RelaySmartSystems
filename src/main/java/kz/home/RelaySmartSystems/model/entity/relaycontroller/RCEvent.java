@@ -12,11 +12,15 @@ import java.util.UUID;
 @Getter
 @Entity
 @NoArgsConstructor
-@Table(name = "rc_events")
+@Table(name = "rc_events",
+       uniqueConstraints = {
+           @UniqueConstraint(columnNames = {"input_uuid", "event"})
+       })
 public class RCEvent {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
+
     private String event;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)

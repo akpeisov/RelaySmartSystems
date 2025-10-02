@@ -449,7 +449,6 @@ public class RelayControllerService {
         try {
             RelayController controller = relayControllerRepository.findByMac(mac.toUpperCase());
             if (controller != null) {
-
                 RCConfigDTO relayControllerDTO = rcConfigMapper.RCtoDto(controller);
                 relayControllerDTO.setCrc(Utils.getCRC(Utils.getJson(relayControllerDTO)));
 
@@ -475,6 +474,7 @@ public class RelayControllerService {
         return null;
     }
 
+    @Transactional
     public String updateOutput(RCOutputDTO rcOutputDTO) {
         // обновление сущности выхода с фронта
         Optional<RCOutput> rcOutputOpt = outputRepository.findById(rcOutputDTO.getUuid());
@@ -499,9 +499,7 @@ public class RelayControllerService {
 
     @Transactional
     public String updateInput(RCInputDTO rcInputDTO) {
-        // обновление сущности входа с фронта
         String result = "OK";
-
         Optional<RCInput> rcInputOpt = inputRepository.findById(rcInputDTO.getUuid());
         try {
             if (rcInputOpt.isPresent()) {
@@ -510,48 +508,38 @@ public class RelayControllerService {
                 rcInput.setType(rcInputDTO.getType());
                 rcInput.setSlaveId(rcInputDTO.getSlaveId());
 
-                // === Обновляем events ===
-                rcInput.getEvents().clear();
-                if (rcInputDTO.getEvents() != null) {
-                    for (RCEventDTO eventDto : rcInputDTO.getEvents()) {
-                        RCEvent event = new RCEvent();
-                        event.setUuid(eventDto.getUuid());
-                        event.setEvent(eventDto.getEvent());
-                        event.setInput(rcInput);
+                if (!rcInput.getCRC().equals(rcInputDTO.getCRC())) {
+                    // events changed
+                    rcInput.getEvents().clear();
 
-                        // === Обновляем actions ===
-                        if (eventDto.getActions() != null) {
-                            List<RCAction> actions = new ArrayList<>();
-                            for (RCActionDTO actionDto : eventDto.getActions()) {
-                                RCAction action = new RCAction();
-                                action.setUuid(actionDto.getUuid());
-                                action.setOrder(actionDto.getOrder());
-                                action.setOutput(actionDto.getOutput());
-                                action.setAction(actionDto.getAction());
-                                action.setDuration(actionDto.getDuration());
-                                action.setSlaveId(actionDto.getSlaveId());
-                                action.setEvent(event);
-                                actions.add(action);
-                            }
-                            event.setActions(actions);
-                        }
+                    if (rcInputDTO.getEvents() != null) {
+                        for (RCEventDTO eventDto : rcInputDTO.getEvents()) {
+                            RCEvent event = new RCEvent();
+                            event.setEvent(eventDto.getEvent());
+                            event.setInput(rcInput);
 
-                        // === Обновляем ACLs ===
-                        if (eventDto.getAcls() != null) {
-                            List<RCAcl> acls = new ArrayList<>();
-                            for (RCAclDTO aclDto : eventDto.getAcls()) {
-                                RCAcl acl = new RCAcl();
-                                acl.setUuid(aclDto.getUuid());
-                                acl.setType(aclDto.getType());
-                                acl.setId(aclDto.getId());
-                                acl.setIo(aclDto.getIo());
-                                acl.setState(aclDto.getState());
-                                acl.setEvent(event);
-                                acls.add(acl);
+                            // actions
+                            if (eventDto.getActions() != null) {
+                                List<RCAction> actions = new ArrayList<>();
+                                for (RCActionDTO actionDto : eventDto.getActions()) {
+                                    RCAction action = getActionFromDto(actionDto);
+                                    action.setEvent(event);
+                                    actions.add(action);
+                                }
+                                event.setActions(actions);
                             }
-                            event.setAcls(acls);
+                            // acls
+                            if (eventDto.getAcls() != null) {
+                                List<RCAcl> acls = new ArrayList<>();
+                                for (RCAclDTO aclDto : eventDto.getAcls()) {
+                                    RCAcl acl = getAclFromDto(aclDto);
+                                    acl.setEvent(event);
+                                    acls.add(acl);
+                                }
+                                event.setAcls(acls);
+                            }
+                            rcInput.getEvents().add(event);
                         }
-                        rcInput.getEvents().add(event);
                     }
                 }
                 inputRepository.save(rcInput);
@@ -563,6 +551,25 @@ public class RelayControllerService {
             result = e.getLocalizedMessage();
         }
         return result;
+    }
+
+    private static RCAction getActionFromDto(RCActionDTO actionDto) {
+        RCAction action = new RCAction();
+        action.setOrder(actionDto.getOrder());
+        action.setOutput(actionDto.getOutput());
+        action.setAction(actionDto.getAction());
+        action.setDuration(actionDto.getDuration());
+        action.setSlaveId(actionDto.getSlaveId());
+        return action;
+    }
+
+    private static RCAcl getAclFromDto(RCAclDTO aclDto) {
+        RCAcl acl = new RCAcl();
+        acl.setType(aclDto.getType());
+        acl.setId(aclDto.getId());
+        acl.setIo(aclDto.getIo());
+        acl.setState(aclDto.getState());
+        return acl;
     }
 
     public String getDeviceActionMessage(Integer output, String action, Integer slaveId) {

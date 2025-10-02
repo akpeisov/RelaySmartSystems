@@ -14,11 +14,14 @@ public class RCOutput {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID uuid;
+    @Column(nullable = false)
     private Integer id;
+    @Column(nullable = false)
     private String name;
     private Long limit;
     private Long timer;
-    private String type;
+    @Column(nullable = false)
+    private String type = "s";
     @Column(name = "default")
     private String _default;
     private String state;

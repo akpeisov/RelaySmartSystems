@@ -8,10 +8,10 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.UUID;
 
-@Entity
-@NoArgsConstructor
 @Setter
 @Getter
+@NoArgsConstructor
+@Entity
 @Table(name = "rc_actions")
 public class RCAction {
     @Id

@@ -9,8 +9,8 @@ import java.util.UUID;
 
 @Setter
 @Getter
-@Entity
 @NoArgsConstructor
+@Entity
 @Table(name = "rc_acls")
 public class RCAcl {
     @Id

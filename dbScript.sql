@@ -9,6 +9,7 @@ select * from public.rc_modbus_config rmc
 select * from public.users u 
 
 select * from public.rc_inputs ri 
+where ri.uuid = 'c48a6543-cb71-47b7-a909-403659541f9a'
 
 select * from public.rc_actions ra 
 
@@ -38,6 +39,9 @@ alter table "controllers" add constraint "FKbtmwwdnqu5aaxu3u3p2fwos3v" foreign k
 
 alter table users add CONSTRAINT users_pkey PRIMARY KEY (uuid)
 
+select * from public.sessions s 
+
+uk_285wqhcvl3u00b5ps8ykvxrcv
 
 b97fffe5-db3a-403d-a098-3404bc226c93
 6cd4fad0-263d-424a-a1f3-374f74f4fb14
@@ -45,6 +49,8 @@ b97fffe5-db3a-403d-a098-3404bc226c93
 insert into public.rc_outputs (uuid, id, "name", relay_controller_uuid)
 values (gen_random_uuid (), 0, 'Out 0', 'b97fffe5-db3a-403d-a098-3404bc226c93')
 
+
+select * from public.rc_inputs ri where uuid = '654435bc-c5ef-40cd-9c68-37ee2aad5cf0'
 
 select * from public.rc_inputs ri
 --left join public.rc_events re on re.input_uuid = ri.uuid 
@@ -58,7 +64,14 @@ FROM information_schema.table_constraints tc
 JOIN information_schema.columns AS c ON c.table_schema = tc.constraint_schema
   AND tc.table_name = c.table_name --AND ccu.column_name = c.column_name
 WHERE 1=1 --tc.table_name like 'rc_%' 
-and constraint_type = 'FOREIGN KEY'
-and constraint_name = 'FKbtmwwdnqu5aaxu3u3p2fwos3v'
+--and constraint_type = 'FOREIGN KEY'
+and constraint_name = 'uk_285wqhcvl3u00b5ps8ykvxrcv'
  
+select * from public.rc_events re where re.input_uuid = '654435bc-c5ef-40cd-9c68-37ee2aad5cf0'
 
+select * from public.rc_events re 
+left join public.rc_actions ra on ra.event_uuid = re.uuid 
+where re.input_uuid = '654435bc-c5ef-40cd-9c68-37ee2aad5cf0'
+
+select * from public.rc_actions ra 
+where ra.event_uuid in (select uuid from public.rc_events re where re.input_uuid = '654435bc-c5ef-40cd-9c68-37ee2aad5cf0')
