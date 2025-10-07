@@ -572,15 +572,15 @@ public class RelayControllerService {
         return acl;
     }
 
-    public String getDeviceActionMessage(Integer output, String action, Integer slaveId) {
+    public String getDeviceActionMessage(RCOutput output, String action) {
         // for alice
         Map<String, Object> objectMap = new HashMap<>();
         objectMap.put("type", "ACTION");
         objectMap.put("payload", new HashMap<String, Object>() {{
-            put("output", output);
+            put("output", output.getId());
             put("action", action);
-            if (slaveId > 0)
-                put("slaveId", slaveId);
+            if (output.getSlaveId() > 0)
+                put("slaveId", output.getSlaveId());
         }});
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -588,7 +588,7 @@ public class RelayControllerService {
             logger.info(json);
             return json;
         } catch (JsonProcessingException e) {
-            //throw new RuntimeException(e);
+            logger.error(e.getLocalizedMessage());
         }
         return "{}";
     }

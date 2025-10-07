@@ -502,22 +502,40 @@ public class WebSocketHandler extends TextWebSocketHandler {
         if (controllerId == null)
             return "MAC_NULL";
 
-        for (WSSession session: wsSessions) {
-            if (!"web".equalsIgnoreCase(session.getType()) &&
-                    controllerId.equalsIgnoreCase(session.getControllerId())) {
+        return wsSessions.stream()
+            .filter(session -> "relayController".equalsIgnoreCase(session.getType()))
+            .filter(session -> controllerId.equalsIgnoreCase(session.getControllerId()))
+            .findFirst()
+            .map(session -> {
                 try {
                     if (session.getSession().isOpen()) {
                         session.sendMessage(new TextMessage(message));
                         return "OK";
+                    } else {
+                        return "SESSION_CLOSED";
                     }
                 } catch (IOException e) {
-                    logger.error(e.getLocalizedMessage());
+                    logger.error("Error sending message to controller {}: {}", controllerId, e.getMessage());
                     return "ERROR";
                 }
-                break;
-            }
-        }
-        return "NOT_FOUND";
+            })
+            .orElse("NOT_FOUND");
+//        for (WSSession session: wsSessions) {
+//            if ("relayController".equalsIgnoreCase(session.getType()) &&
+//                    controllerId.equalsIgnoreCase(session.getControllerId())) {
+//                try {
+//                    if (session.getSession().isOpen()) {
+//                        session.sendMessage(new TextMessage(message));
+//                        return "OK";
+//                    }
+//                } catch (IOException e) {
+//                    logger.error(e.getLocalizedMessage());
+//                    return "ERROR";
+//                }
+//                break;
+//            }
+//        }
+//        return "NOT_FOUND";
     }
 
     public void sendMessageToWebUser(User user, String message) {

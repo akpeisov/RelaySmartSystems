@@ -27,6 +27,8 @@ public class AliceRequestLogService {
     }
 
     public void setResponse(UUID uuid, String response) {
+        if (uuid == null || response == null)
+            return;
         AliceRequestLog aliceRequestLog = aliceRequestLogRepository.findById(uuid).orElse(null);
         if (aliceRequestLog == null)
             return;
