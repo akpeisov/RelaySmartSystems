@@ -1,149 +1,656 @@
 {
-        "uuid": "6cd4fad0-263d-424a-a1f3-374f74f4fb14",
-        "mac": "12345678",
-        "type": "relayController",
-        "name": "master",
-        "type": "RCV2B",
-        "status": "offline",
         "ws": "http://localhost:8888/ws",
-        "outputs": [
-        {
-            "id": 0,
-            "name": "Out 0",
-            "type": "s",
-            "state": "off",
-            "default": "off",
-            "duration": 0,
-            "timer": 0
-        },
-        {
-            "id": 1,
-            "name": "Out 1",
-            "type": "s",
-            "state": "off",
-            "default": "off"
-        },
-        {
-            "id": 2,
-            "name": "Out 2",
-            "type": "s",
-            "state": "off",
-            "default": "off"
-        },
-        {
-            "id": 3,
-            "name": "Out 3",
-            "type": "s",
-            "state": "off",
-            "default": "off",
-            "duration": 0,
-            "timer": 0
-        }
+  "mac": "C8F09E310FE8",
+  "hostname": "RC_C8F09E310FE8",
+  "description": "My RelayController",
+  "hw": {
+    "freq": 500,
+    "pwm": 2500
+  },
+  "network": {
+    "cloud": {
+      "enabled": true,
+      "address": "wss://api.akpeisov.kz/ws"
+    },
+    "eth": {
+      "enabled": true,
+      "dhcp": true,
+      "enablereset": true,
+      "resetGPIO": 5
+    },
+    "ntpServer": "pool.ntp.org",
+    "ntpTZ": "UTC-5:00",
+    "otaURL": "https://api.akpeisov.kz/RelayController.bin",
+    "wifi": {
+      "enabled": true,
+      "ssid": "Alana",
+      "pass": "zxcv1234",
+      "dhcp": true
+    }
+  },
+  "modbus": {
+    "enabled": true,
+    "mode": "master",
+    "pollingTime": 100,
+    "actionOnSameSlave": false,
+    "slaves": [
+      {
+        "slaveId": 2,
+        "model": "RCV2B",
+        "outputsState": 0,
+        "inputsState": 0
+      }
+    ]
+  },
+  "name": "RC_C8F09E310FE8",
+  "io": {
+    "outputs": [
+      {
+        "id": 0,
+        "name": "Out 0",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 1,
+        "name": "Out 1",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 2,
+        "name": "Out 2",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 3,
+        "name": "Out 3",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 4,
+        "name": "Out 4",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 5,
+        "name": "Out 5",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 6,
+        "name": "Out 6",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 7,
+        "name": "Out 7",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 8,
+        "name": "Out 8",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 9,
+        "name": "Out 9",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 10,
+        "name": "Out 10",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 11,
+        "name": "Out 11",
+        "type": "s",
+        "state": "off",
+        "default": "off"
+      },
+      {
+        "id": 0,
+        "name": "Sl 2 Out 0",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 1,
+        "name": "Sl 2 Out 1",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 2,
+        "name": "Sl 2 Out 2",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 3,
+        "name": "Sl 2 Out 3",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 4,
+        "name": "Sl 2 Out 4",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 5,
+        "name": "Sl 2 Out 5",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 6,
+        "name": "Sl 2 Out 6",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 7,
+        "name": "Sl 2 Out 7",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 8,
+        "name": "Sl 2 Out 8",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 9,
+        "name": "Sl 2 Out 9",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 10,
+        "name": "Sl 2 Out 10",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      },
+      {
+        "id": 11,
+        "name": "Sl 2 Out 11",
+        "slaveId": 2,
+        "state": "off",
+        "type": "s",
+        "default": "off"
+      }
     ],
     "inputs": [
-        {
-            "id": 16,
-            "name": "Svc 0",
-            "type": "BTN",
-            "events": [
-                {
-                    "event": "toggle",
-                    "actions": [
-                        {
-                            "order": 0,
-                            "output": 0,
-                            "action": "toggle"
-                        }
-                    ],
-                    "acls": [
-                        {
-                            "type": "allow",
-                            "io": "o",
-                            "id": 1,
-                            "state": "on"
-                        }
-                    ]
-                }
+      {
+        "id": 16,
+        "name": "Svc 0",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 0,
+                "action": "toggle"
+              }
             ]
-        },
-        {
-            "id": 17,
-            "name": "Svc 1",
-            "type": "BTN",
-            "events": [
-                {
-                    "event": "toggle",
-                    "actions": [
-                        {
-                            "order": 0,
-                            "output": 1,
-                            "action": "toggle"
-                        }
-                    ]
-                }
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 17,
+        "name": "Svc 1",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 1,
+                "action": "toggle"
+              }
             ]
-        },
-        {
-            "id": 18,
-            "name": "Svc 2",
-            "type": "BTN",
-            "events": [
-                {
-                    "event": "toggle",
-                    "actions": [
-                        {
-                            "order": 0,
-                            "output": 2,
-                            "action": "toggle"
-                        }
-                    ]
-                }
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 18,
+        "name": "Svc 2",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 2,
+                "action": "toggle"
+              }
             ]
-        },
-        {
-            "id": 19,
-            "name": "Svc 3",
-            "type": "BTN",
-            "events": [
-                {
-                    "event": "toggle",
-                    "actions": [
-                        {
-                            "order": 0,
-                            "output": 3,
-                            "action": "toggle"
-                        }
-                    ]
-                }
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 19,
+        "name": "Svc 3",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 3,
+                "action": "toggle"
+              }
             ]
-        },
-        {
-            "id": 0,
-            "name": "In 0",
-            "type": "SW",
-            "events": [],
-            "events": []
-        },
-        {
-            "id": 1,
-            "name": "In 1",
-            "type": "SW",
-            "events": [],
-            "events": []
-        },
-        {
-            "id": 2,
-            "name": "In 2",
-            "type": "SW",
-            "events": [],
-            "events": []
-        },
-        {
-            "id": 3,
-            "name": "In 3",
-            "type": "SW",
-            "events": [],
-            "events": []
-        }
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 20,
+        "name": "Svc 4",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 4,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 21,
+        "name": "Svc 5",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 5,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 22,
+        "name": "Svc 6",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 6,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 23,
+        "name": "Svc 7",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 7,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 24,
+        "name": "Svc 8",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 8,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 25,
+        "name": "Svc 9",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 9,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 26,
+        "name": "Svc 10",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 10,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 27,
+        "name": "Svc 11",
+        "type": "BTN",
+        "events": [
+          {
+            "event": "toggle",
+            "actions": [
+              {
+                "order": 0,
+                "output": 11,
+                "action": "toggle"
+              }
+            ]
+          }
+        ],
+        "state": "off"
+      },
+      {
+        "id": 0,
+        "name": "In 0",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 1,
+        "name": "In 1",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 2,
+        "name": "In 2",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 3,
+        "name": "In 3",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 4,
+        "name": "In 4",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 5,
+        "name": "In 5",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 6,
+        "name": "In 6",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 7,
+        "name": "In 7",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 8,
+        "name": "In 8",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 9,
+        "name": "In 9",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 10,
+        "name": "In 10",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 11,
+        "name": "In 11",
+        "type": "SW",
+        "events": [],
+        "state": "on"
+      },
+      {
+        "id": 12,
+        "name": "In 12",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 13,
+        "name": "In 13",
+        "type": "SW",
+        "events": [],
+        "state": "on"
+      },
+      {
+        "id": 14,
+        "name": "In 14",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 15,
+        "name": "In 15",
+        "type": "SW",
+        "events": [],
+        "state": "off"
+      },
+      {
+        "id": 0,
+        "name": "Sl 2 In 0",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 1,
+        "name": "Sl 2 In 1",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 2,
+        "name": "Sl 2 In 2",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 3,
+        "name": "Sl 2 In 3",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 4,
+        "name": "Sl 2 In 4",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 5,
+        "name": "Sl 2 In 5",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 6,
+        "name": "Sl 2 In 6",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 7,
+        "name": "Sl 2 In 7",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 8,
+        "name": "Sl 2 In 8",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 9,
+        "name": "Sl 2 In 9",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 10,
+        "name": "Sl 2 In 10",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 11,
+        "name": "Sl 2 In 11",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 12,
+        "name": "Sl 2 In 12",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 13,
+        "name": "Sl 2 In 13",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 14,
+        "name": "Sl 2 In 14",
+        "slaveId": 2,
+        "state": "off"
+      },
+      {
+        "id": 15,
+        "name": "Sl 2 In 15",
+        "slaveId": 2,
+        "state": "off"
+      }
     ]
+  }
 }

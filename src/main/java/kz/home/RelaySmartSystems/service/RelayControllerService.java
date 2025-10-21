@@ -361,7 +361,7 @@ public class RelayControllerService {
 
         if ("master".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
             // find all slaves and add their io to master
-            List<Integer> slaveIds = new ArrayList<>();
+            List<Integer> slaveIds = new ArrayList<>(); // list of slaves
             for (RCModbusConfig modbusConfig : rcModbusConfigRepository.findByMaster(relayController.getMac())) {
                 slaveIds.add(modbusConfig.getSlaveId());
                 // add outputs and inputs
@@ -377,8 +377,8 @@ public class RelayControllerService {
             }
 
             // remove all io not in slaveIds
-            relayController.getInputs()
-                    .removeIf(input -> input.getSlaveId() > 0 && !slaveIds.contains(input.getSlaveId()));
+//            relayController.getInputs()
+//                    .removeIf(input -> input.getSlaveId() > 0 && !slaveIds.contains(input.getSlaveId()));
             relayController.getOutputs()
                     .removeIf(output -> output.getSlaveId() > 0 && !slaveIds.contains(output.getSlaveId()));
 
@@ -430,7 +430,7 @@ public class RelayControllerService {
         relayControllerRepository.save(relayController);
 
         // modbus
-        saveMBConfig(rcConfigDTO.getModbus(), relayController);
+        //saveMBConfig(rcConfigDTO.getModbus(), relayController);
 
         // network
         saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);

@@ -86,9 +86,8 @@ hsEOoRXDPxct0Wbcz94jwjI=
 -----END PRIVATE KEY-----`;
 
 
-    async function generateJwtToken() {
+    async function generateJwtToken(mac) {
       const alg = 'RS256';
-      const mac = "123456789000";
       const privateKey = await importPKCS8(privateKeyPem, alg);
       const now = Math.floor(Date.now() / 1000);
       return await new SignJWT({ mac })
@@ -102,10 +101,10 @@ hsEOoRXDPxct0Wbcz94jwjI=
       const res = await fetch('config.json');
       config = await res.json();
 
-      config.inputs.forEach(i => {
+      config.io.inputs.forEach(i => {
         state.inputs[i.id] = i;
       });
-      config.outputs.forEach(o => state.outputs[o.id] = o);
+      config.io.outputs.forEach(o => state.outputs[o.id] = o);
 
       document.getElementById('info').innerHTML = `
         <strong>MAC:</strong> ${config.mac} |
@@ -117,7 +116,7 @@ hsEOoRXDPxct0Wbcz94jwjI=
       document.getElementById('sendConfigBtn').onclick = sendConfig;
 
       renderTable();
-      connectWebSocket();
+      connectWebSocket(config.mac);
     }
 
     function renderTable() {
@@ -206,12 +205,12 @@ hsEOoRXDPxct0Wbcz94jwjI=
       }
     }
 
-    async function connectWebSocket() {
+    async function connectWebSocket(mac) {
       const url = config.ws.replace('http', 'ws');
       ws = new WebSocket(url);
 
       ws.onopen = async () => {
-        const token = await generateJwtToken();
+        const token = await generateJwtToken(mac);
         ws.send(JSON.stringify({
           type: "HELLO",
           payload: {
