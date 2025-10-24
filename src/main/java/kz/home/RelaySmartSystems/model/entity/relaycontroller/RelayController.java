@@ -15,11 +15,11 @@ import java.util.List;
 @Table(name = "rc_controllers")
 public class RelayController extends Controller {
     // mappedBy - имя "колонки" (точнее поля) в дочерней таблице, по которой будет связка с id данной
-    @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<RCOutput> outputs;
 
-    @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "relayController", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<RCInput> inputs;
 

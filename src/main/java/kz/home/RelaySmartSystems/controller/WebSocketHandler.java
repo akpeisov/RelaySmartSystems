@@ -101,7 +101,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
 
         // TODO : разделить запросы и ответы от контроллеров и фронта (только хэллоу общий)
-
+        String res;
 
         switch (type) {
             case "HELLO":
@@ -164,16 +164,45 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 break;
 
             case "DEVICECONFIG":
-                // получение конфига от контроллера
-                // вызывается если это новый контроллер
+                // получение конфига от контроллера или фронта
+                RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
-                    RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
                     rcConfigDTO.setMac(wsSession.getControllerId());
-                    relayControllerService.saveRelayController(rcConfigDTO);
-                    wsSession.setAuthorized(true);
-                    wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
-                } else {
-                    session.sendMessage(new TextMessage(errorMessage("Unknown type")));
+                    try {
+                        // для RC перетираем весь конфиг
+                        res = relayControllerService.saveRelayController(rcConfigDTO);
+                    } catch (Exception e) {
+                        logger.error(e.getLocalizedMessage());
+                        res = "Wrong config format";
+                    }
+                    if (!"OK".equalsIgnoreCase(res)) {
+                        wsSession.setAuthorized(true);
+                        wsSession.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
+                    } else {
+                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
+                    }
+                } else if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    // для web сохраняем только конфиг без IO
+                    res = relayControllerService.saveConfig(rcConfigDTO);
+                    if ("OK".equalsIgnoreCase(res))
+                        wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
+                    else
+                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
+                }
+                break;
+
+            case "DEVICECONFIGRESPONSE":
+                if ("relayController".equalsIgnoreCase(wsSession.getType())) {
+                    // результат обновления конфига от контроллера
+                    Message msg = objectMapper.readValue(json, Message.class);
+                    if (msg.getMessage() != null) {
+                        logger.info("DEVICECONFIGRESPONSE msg {}", msg.getMessage());
+                        if ("OK".equalsIgnoreCase(msg.getMessage())) {
+                            sendMessageToWebUser(wsSession.getUser(), successMessage("Upload successful"));
+                        } else {
+                            sendMessageToWebUser(wsSession.getUser(), errorMessage("Upload to controller failed"));
+                        }
+                    }
                 }
                 break;
 
@@ -234,34 +263,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
-            case "SETDEVICECONFIG":
-                if ("relayController".equalsIgnoreCase(wsSession.getType())) {
-                    // результат обновления конфига от контроллера
-                    Message msg = objectMapper.readValue(json, Message.class);
-                    if (msg.getMessage() != null) {
-                        logger.info("SETDEVICECONFIG msg {}", msg.getMessage());
-                        if ("OK".equalsIgnoreCase(msg.getMessage())) {
-                            sendMessageToWebUser(wsSession.getUser(), successMessage("Upload successful"));
-                        } else {
-                            sendMessageToWebUser(wsSession.getUser(), errorMessage("Upload to controller failed"));
-                        }
-                    }
-                } else {
-                    // обновление конфига контроллера с фронта
-                    try {
-                        RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
-                        String res = relayControllerService.saveConfig(rcConfigDTO);
-                        if ("OK".equalsIgnoreCase(res))
-                            wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
-                        else
-                            wsSession.sendMessage(new TextMessage(errorMessage(res)));
-                    } catch (Exception e) {
-                        logger.error(e.getLocalizedMessage());
-                        wsSession.sendMessage(new TextMessage(errorMessage("Wrong config format")));
-                    }
-                }
-                break;
-
             case "ACTION":
                 // отправка действия на контроллер
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
@@ -281,7 +282,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     RCOutputDTO rcUpdateOutputDTO = objectMapper.readValue(json, RCOutputDTO.class);
                     // обновление только в БД, конфиг потом руками на контроллер, пока только для relaycontroller
-                    String res = relayControllerService.updateOutput(rcUpdateOutputDTO);
+                    res = relayControllerService.updateOutput(rcUpdateOutputDTO);
                     if ("OK".equalsIgnoreCase(res))
                         wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
                     else
@@ -294,7 +295,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     // пока только для relaycontroller
                     RCInputDTO rcUpdateInputDTO = objectMapper.readValue(json, RCInputDTO.class);
-                    String res = relayControllerService.updateInput(rcUpdateInputDTO);
+                    res = relayControllerService.updateInput(rcUpdateInputDTO);
                     if ("OK".equalsIgnoreCase(res))
                         wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
                     else
@@ -339,42 +340,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
-//            case "SETNETWORKCONFIG":
-//                // сохранение network config
-//                if ("web".equalsIgnoreCase(wsSession.getType())) {
-//                    NetworkConfigDTO networkConfigDTO = objectMapper.readValue(json, NetworkConfigDTO.class);
-//                    relayControllerService.saveNetworkConfig(networkConfigDTO);
-//                }
-//                break;
-//
-//            case "SETMODBUSCONFIG":
-//                // сохранение network config
-//                if ("web".equalsIgnoreCase(wsSession.getType())) {
-//                    RCModbusConfigDTO rcModbusConfigDTO = objectMapper.readValue(json, RCModbusConfigDTO.class);
-//                    String res = relayControllerService.saveMBConfig(rcModbusConfigDTO);
-//                    if ("OK".equalsIgnoreCase(res))
-//                        wsSession.sendMessage(new TextMessage(successMessage("Saved successfully")));
-//                    else
-//                        wsSession.sendMessage(new TextMessage(errorMessage(res)));
-//                }
-//                break;
-//
-//            case "SETMQTTCONFIG":
-//                // сохранение network config
-//                if ("web".equalsIgnoreCase(wsSession.getType())) {
-//                    RCMqttDTO rcMqttDTO = objectMapper.readValue(json, RCMqttDTO.class);
-//                    relayControllerService.saveMqttConfig(rcMqttDTO);
-//                }
-//                break;
-//
-//            case "SETSCHEDULERCONFIG":
-//                // сохранение scheduler config
-//                if ("web".equalsIgnoreCase(wsSession.getType())) {
-//                    RCSchedulerDTO rcSchedulerDTO = objectMapper.readValue(json, RCSchedulerDTO.class);
-//                    relayControllerService.saveSchedulerConfig(rcSchedulerDTO);
-//                }
-//                break;
-
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Command command = objectMapper.readValue(json, Command.class);
@@ -401,7 +366,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                             String deviceConfig = relayControllerService.makeDeviceConfig(command.getMac());
 //                          logger.info(deviceConfig);
                             if (!"{}".equalsIgnoreCase(deviceConfig)) {
-                                String res = sendMessageToController(command.getMac(), deviceConfig);
+                                res = sendMessageToController(command.getMac(), deviceConfig);
                                 logger.info("sendMessageToController {}", res);
                                 if ("OK".equalsIgnoreCase(res)) {
                                     wsSession.sendMessage(new TextMessage(successMessage("Successfully")));

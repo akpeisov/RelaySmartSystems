@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import kz.home.RelaySmartSystems.Utils;
 
@@ -125,7 +126,7 @@ public class RelayControllerService {
     @Transactional
     public String saveConfig(RCConfigDTO rcConfigDTO) {
         RelayController relayController = relayControllerRepository.findByMac(rcConfigDTO.getMac());
-        String res = saveMBConfig(rcConfigDTO.getModbus(), relayController);
+        String res = saveMBConfig(rcConfigDTO.getModbus(), rcConfigDTO.getMac());
         if (!"OK".equals(res))
             return res;
         res = saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);
@@ -334,9 +335,14 @@ public class RelayControllerService {
     }
 
     private String saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO,
-                             RelayController relayController) {
+                                /*RelayController relayController*/ String mac) {
         if (rcModbusConfigDTO == null)
             return "EMPTY";
+
+        RelayController relayController = relayControllerRepository.findByMac(mac);
+        if (relayController == null) {
+            return "Relay controller not found";
+        }
 
         UUID rcModbusConfigUUID;
         RCModbusConfig config = rcModbusConfigRepository.findByController(relayController);
@@ -377,6 +383,7 @@ public class RelayControllerService {
             }
 
             // remove all io not in slaveIds
+            // A collection with cascade="all-delete-orphan" was no longer referenced by the owning entity instance
             relayController.getInputs()
                     .removeIf(input -> input.getSlaveId() > 0 && !slaveIds.contains(input.getSlaveId()));
             relayController.getOutputs()
@@ -411,13 +418,16 @@ public class RelayControllerService {
         return "OK";
     }
 
-    public void saveRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
+    @Transactional
+    public String saveRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
         // only for new RC
         // find existing RC
         String mac = rcConfigDTO.getMac();
+        String res = "OK";
         if (mac == null) {
-            logger.error("saveRelayController. Mac is null");
-            return;
+            res = "Mac is null";
+            logger.error(res);
+            return res;
         }
         RelayController existingRelayController = relayControllerRepository.findByMac(mac);
         if (existingRelayController != null) {
@@ -429,17 +439,21 @@ public class RelayControllerService {
         RelayController relayController = relayControllerMapper.toEntity(rcConfigDTO); //rcConfigMapper.toEntityRC(rcConfigDTO);
         relayControllerRepository.save(relayController);
 
-        // modbus
-        saveMBConfig(rcConfigDTO.getModbus(), relayController);
+        // save config
+        res = saveConfig(rcConfigDTO);
+        return res;
 
-        // network
-        saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);
-
-        // scheduler
-        saveSchedulerConfig(rcConfigDTO.getScheduler(), relayController);
-
-        // mqtt
-        saveMqttConfig(rcConfigDTO.getMqtt(), relayController);
+//        // modbus
+//        saveMBConfig(rcConfigDTO.getModbus(), relayController.getMac());
+//
+//        // network
+//        saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);
+//
+//        // scheduler
+//        saveSchedulerConfig(rcConfigDTO.getScheduler(), relayController);
+//
+//        // mqtt
+//        saveMqttConfig(rcConfigDTO.getMqtt(), relayController);
     }
 
     @Transactional
