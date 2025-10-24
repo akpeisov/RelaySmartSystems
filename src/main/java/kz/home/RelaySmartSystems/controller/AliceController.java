@@ -1,6 +1,5 @@
 package kz.home.RelaySmartSystems.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.Utils;
 import kz.home.RelaySmartSystems.model.alice.AliceResponseError;
 import kz.home.RelaySmartSystems.model.entity.User;

@@ -28,8 +28,8 @@ public class RCModbusConfigDTO {
 
     @Getter
     @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class SlaveDTO {
-        //private UUID uuid;
         private String mac;
         private Integer slaveId;
         private String model;

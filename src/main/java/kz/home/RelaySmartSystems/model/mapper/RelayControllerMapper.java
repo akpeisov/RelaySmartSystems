@@ -132,6 +132,8 @@ public class RelayControllerMapper {
             input.setId(inputDTO.getId());
             input.setName(inputDTO.getName());
             input.setType(inputDTO.getType());
+            if (input.getType() == null)
+                input.setType("SW");
             input.setState(inputDTO.getState());
             input.setSlaveId(inputDTO.getSlaveId());
 
