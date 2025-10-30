@@ -33,7 +33,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new WebSocketHandler(controllerService,
                 relayControllerService, jwtAuthorizationFilter, userService, sessionService), "/ws").setAllowedOrigins("*");
-    //    registry.addHandler(new WebSocketHandlerUI(jwtAuthorizationFilter, controllerService, eventPublisher), "/wsui").setAllowedOrigins("*");
     }
 
 

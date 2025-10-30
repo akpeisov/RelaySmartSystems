@@ -41,7 +41,6 @@ public class WebAPI {
     public ResponseEntity<?> getUserDevices(HttpServletRequest request) {
         String username = (String) request.getAttribute("username");
         // TODO : убрать заглушку
-        logger.info("env {}", env);
         logger.info("username {}", username);
         if ("dev".equalsIgnoreCase(env) && username == null)
             username = "user";

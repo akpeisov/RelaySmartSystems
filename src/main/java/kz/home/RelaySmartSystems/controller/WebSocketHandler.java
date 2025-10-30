@@ -392,9 +392,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 break;
 
             default:
-                logger.warn(String.format("Unknown message %s", type));
+                logger.warn("Unknown message {}", type);
                 logger.info(wsTextMessage.getPayload().toString());
-                session.sendMessage(new TextMessage(errorMessage("I receive your message, but nothing to say...")));
+                session.sendMessage(new TextMessage(errorMessage("Unknown message")));
                 break;
         }
     }
