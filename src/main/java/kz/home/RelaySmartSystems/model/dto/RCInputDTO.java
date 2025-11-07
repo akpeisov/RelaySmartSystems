@@ -80,7 +80,7 @@ public class RCInputDTO {
                         }
                     });
         }
-
+        System.out.println("RCInputDTO crc " + sb.toString());
         return Utils.getCRC(sb.toString());
     }
 }

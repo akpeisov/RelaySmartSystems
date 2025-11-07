@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import kz.home.RelaySmartSystems.Utils;
 
@@ -419,7 +418,7 @@ public class RelayControllerService {
     }
 
     @Transactional
-    public String saveRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
+    public String saveNewRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
         // only for new RC
         // find existing RC
         String mac = rcConfigDTO.getMac();
@@ -442,18 +441,6 @@ public class RelayControllerService {
         // save config
         res = saveConfig(rcConfigDTO);
         return res;
-
-//        // modbus
-//        saveMBConfig(rcConfigDTO.getModbus(), relayController.getMac());
-//
-//        // network
-//        saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);
-//
-//        // scheduler
-//        saveSchedulerConfig(rcConfigDTO.getScheduler(), relayController);
-//
-//        // mqtt
-//        saveMqttConfig(rcConfigDTO.getMqtt(), relayController);
     }
 
     @Transactional
@@ -472,7 +459,7 @@ public class RelayControllerService {
                 objectMap.put("payload", relayControllerDTO);
 
                 json = Utils.getJson(objectMap);
-                json = Utils.removeFieldsJSON(json, "uuid", "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
+                json = Utils.removeFieldsJSON(json, "crc", "outputUuid", "uuid", "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
             }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage());
@@ -525,6 +512,7 @@ public class RelayControllerService {
                 if (!rcInput.getCRC().equals(rcInputDTO.getCRC())) {
                     // events changed
                     rcInput.getEvents().clear();
+                    inputRepository.flush();
 
                     if (rcInputDTO.getEvents() != null) {
                         for (RCEventDTO eventDto : rcInputDTO.getEvents()) {
@@ -537,6 +525,12 @@ public class RelayControllerService {
                                 List<RCAction> actions = new ArrayList<>();
                                 for (RCActionDTO actionDto : eventDto.getActions()) {
                                     RCAction action = getActionFromDto(actionDto);
+                                    // TODO : пока временный костыль
+//                                    Optional<RCOutput> rcOutput = outputRepository.findById(actionDto.getOutputUuid());
+//                                    if (rcOutput.isPresent()) {
+//                                        action.setOutput(rcOutput.get().getId());
+//                                        action.setSlaveId(rcOutput.get().getSlaveId());
+//                                    }
                                     action.setEvent(event);
                                     actions.add(action);
                                 }
@@ -555,6 +549,8 @@ public class RelayControllerService {
                             rcInput.getEvents().add(event);
                         }
                     }
+                } else {
+                    logger.info("Input {} events not changed", rcInput.getName());
                 }
                 inputRepository.save(rcInput);
             } else {
@@ -567,13 +563,15 @@ public class RelayControllerService {
         return result;
     }
 
-    private static RCAction getActionFromDto(RCActionDTO actionDto) {
+
+    private RCAction getActionFromDto(RCActionDTO actionDto) {
         RCAction action = new RCAction();
+        action.setOutput(outputRepository.getReferenceById(actionDto.getOutputUuid()));
         action.setOrder(actionDto.getOrder());
-        action.setOutput(actionDto.getOutput());
+//        action.setSlaveId(actionDto.getSlaveId());
+//        action.setOutput(actionDto.getOutput());
         action.setAction(actionDto.getAction());
         action.setDuration(actionDto.getDuration());
-        action.setSlaveId(actionDto.getSlaveId());
         return action;
     }
 

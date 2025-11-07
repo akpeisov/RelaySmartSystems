@@ -4,6 +4,7 @@ import kz.home.RelaySmartSystems.model.entity.NetworkConfig;
 import kz.home.RelaySmartSystems.model.dto.*;
 import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.RCModbusConfigRepository;
+import kz.home.RelaySmartSystems.repository.RCOutputRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -15,14 +16,17 @@ public class RCConfigMapper {
     private final RCModbusConfigRepository modbusConfigRepository;
     private final RCSchedulerMapper rcSchedulerMapper;
     private final RCMqttMapper rcMqttMapper;
+    private final RCOutputRepository rcOutputRepository;
     public RCConfigMapper(RelayControllerMapper relayControllerMapper,
                           RCModbusConfigRepository modbusConfigRepository,
                           RCSchedulerMapper rcSchedulerMapper,
-                          RCMqttMapper rcMqttMapper) {
+                          RCMqttMapper rcMqttMapper,
+                          RCOutputRepository rcOutputRepository) {
         this.relayControllerMapper = relayControllerMapper;
         this.modbusConfigRepository = modbusConfigRepository;
         this.rcSchedulerMapper = rcSchedulerMapper;
         this.rcMqttMapper = rcMqttMapper;
+        this.rcOutputRepository = rcOutputRepository;
     }
 
     private NetworkConfigDTO networkToDto(NetworkConfig networkConfig) {
@@ -95,7 +99,31 @@ public class RCConfigMapper {
         // io
         RCIOConfigDTO rcioConfigDTO = new RCIOConfigDTO();
         rcioConfigDTO.setOutputs(relayControllerMapper.outputsToDTO(controller.getOutputs()));
-        rcioConfigDTO.setInputs(relayControllerMapper.inputsToDTO(controller.getInputs()));
+
+        // сначала получить inputs DTO
+        List<RCInputDTO> inputs = relayControllerMapper.inputsToDTO(controller.getInputs());
+        rcioConfigDTO.setInputs(inputs);
+
+        // для каждого action попытаться найти соответствующий output и прописать outputUuid
+//        if (inputs != null) {
+//            for (RCInputDTO inputDTO : inputs) {
+//                if (inputDTO.getEvents() == null) continue;
+//                for (RCEventDTO eventDTO : inputDTO.getEvents()) {
+//                    if (eventDTO.getActions() == null) continue;
+//                    for (RCActionDTO actionDTO : eventDTO.getActions()) {
+//                        if (actionDTO.getOutput() == null) continue;
+//                        try {
+//                            RCOutput out = rcOutputRepository.findOutput(controller.getUuid(), actionDTO.getOutput(), actionDTO.getSlaveId());
+//                            if (out != null) {
+//                                actionDTO.setOutputUuid(out.getUuid());
+//                            }
+//                        } catch (Exception ignored) {
+//                        }
+//                    }
+//                }
+//            }
+//        }
+
         rcConfigDTO.setIo(rcioConfigDTO);
         // modbus
         RCModbusConfigDTO rcModbusInfoDTO = relayControllerMapper.modbusToDTO(controller.getModbusConfig());

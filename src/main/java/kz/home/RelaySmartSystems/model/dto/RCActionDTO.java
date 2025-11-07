@@ -19,17 +19,18 @@ public class RCActionDTO {
     private String action;
     private Integer duration; // только для action = wait
     private Integer slaveId;
+    private UUID outputUuid;
     public Integer getSlaveId() {
         return slaveId == null ? 0 : slaveId;
     }
 
-
-    public RCActionDTO(UUID uuid, Integer order, Integer output, String action, Integer duration, Integer slaveId) {
+    public RCActionDTO(UUID uuid, Integer order, Integer output, String action, Integer duration, Integer slaveId, UUID outputUuid) {
         this.uuid = uuid;
         this.order = order;
         this.output = output;
         this.action = action;
         this.duration = duration;
         this.slaveId = slaveId;
+        this.outputUuid = outputUuid;
     }
 }

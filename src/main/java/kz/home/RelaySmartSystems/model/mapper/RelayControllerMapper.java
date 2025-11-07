@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.model.mapper;
 
 import kz.home.RelaySmartSystems.model.dto.*;
 import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
+import kz.home.RelaySmartSystems.repository.RCOutputRepository;
 import org.apache.commons.beanutils.BeanUtils;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
@@ -15,15 +16,15 @@ import java.util.stream.Collectors;
 
 @Service
 public class RelayControllerMapper {
-
     private RCActionDTO mapAction(RCAction action) {
         return new RCActionDTO(
                 action.getUuid(),
                 action.getOrder(),
-                action.getOutput(),
+                action.getOutput().getId(),
                 action.getAction(),
                 action.getDuration(),
-                action.getSlaveId()
+                action.getOutput().getSlaveId(),
+                action.getOutput().getUuid()
         );
     }
 
@@ -103,6 +104,7 @@ public class RelayControllerMapper {
     }
 
     public RelayController toEntity(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
+        // when config received from device
         RelayController relayController = new RelayController();
 
         // general info
@@ -149,6 +151,11 @@ public class RelayControllerMapper {
                         for (RCActionDTO action : eventDTO.getActions()) {
                             RCAction newAction = new RCAction();
                             BeanUtils.copyProperties(newAction, action);
+                            outputs.stream().filter(rcOutput -> rcOutput.getId().equals(action.getOutput())
+                                    && ((rcOutput.getSlaveId() == null && action.getSlaveId() == null)
+                                    || (rcOutput.getSlaveId() != null && rcOutput.getSlaveId().equals(action.getSlaveId()))))
+                                    .findFirst()
+                                    .ifPresent(newAction::setOutput);
                             newAction.setEvent(newEvent);
                             newActions.add(newAction);
                         }

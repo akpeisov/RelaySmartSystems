@@ -51,10 +51,10 @@ public class RCInput {
                                     .forEach(action -> {
                                         sb.append(";action[")
                                                 .append("order=").append(action.getOrder())
-                                                .append(",output=").append(action.getOutput())
                                                 .append(",act=").append(action.getAction())
                                                 .append(",dur=").append(action.getDuration())
-                                                .append(",slaveId=").append(action.getSlaveId())
+                                                .append(",slaveId=").append(action.getOutput().getSlaveId())
+                                                .append(",output=").append(action.getOutput().getId())
                                                 .append("]");
                                     });
                         }
@@ -74,7 +74,7 @@ public class RCInput {
                         }
                     });
         }
-
+System.out.println("RCInput crc " + sb.toString());
         return Utils.getCRC(sb.toString());
     }
 }

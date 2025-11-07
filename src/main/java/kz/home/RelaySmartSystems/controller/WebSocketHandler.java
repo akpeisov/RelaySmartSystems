@@ -1,9 +1,6 @@
 package kz.home.RelaySmartSystems.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import kz.home.RelaySmartSystems.filters.IpHandshakeInterceptor;
 import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
 import kz.home.RelaySmartSystems.model.*;
@@ -26,7 +23,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Component
@@ -170,7 +166,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     rcConfigDTO.setMac(wsSession.getControllerId());
                     try {
                         // для RC перетираем весь конфиг
-                        res = relayControllerService.saveRelayController(rcConfigDTO);
+                        res = relayControllerService.saveNewRelayController(rcConfigDTO);
                     } catch (Exception e) {
                         logger.error(e.getLocalizedMessage());
                         res = "Wrong config format";

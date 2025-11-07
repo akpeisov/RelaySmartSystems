@@ -67,11 +67,57 @@ WHERE 1=1 --tc.table_name like 'rc_%'
 --and constraint_type = 'FOREIGN KEY'
 and constraint_name = 'uk_285wqhcvl3u00b5ps8ykvxrcv'
  
-select * from public.rc_events re where re.input_uuid = '654435bc-c5ef-40cd-9c68-37ee2aad5cf0'
+select * from public.rc_inputs where uuid = 'd9e2cad6-acd9-4c12-9dc1-d1a1ce43df02' 
 
 select * from public.rc_events re 
 left join public.rc_actions ra on ra.event_uuid = re.uuid 
-where re.input_uuid = '654435bc-c5ef-40cd-9c68-37ee2aad5cf0'
+where re.input_uuid = 'd9e2cad6-acd9-4c12-9dc1-d1a1ce43df02'
+
+select * from public.rc_actions ra where ra.event_uuid in ( select uuid from public.rc_events re where re.input_uuid = 'd9e2cad6-acd9-4c12-9dc1-d1a1ce43df02')
+
+update public.rc_actions ra 
+   set output_uuid = rr.uuid
+ where ra.uuid = (
+select uuid from public.rc_outputs ro 
+ where ro.relay_controller_uuid = (select ri.relay_controller_uuid from public.rc_inputs ri, public.rc_events re where ri.uuid = re.input_uuid and re.uuid = ra.event_uuid)
+  and ro.id = ra."output" 
+  and coalesce(ro.slave_id, 0) = coalesce(ra.slave_id, 0)) rr
+
+UPDATE public.rc_actions ra
+SET output_uuid = (
+    SELECT ro.uuid
+    FROM public.rc_outputs ro
+    WHERE ro.relay_controller_uuid = (
+        SELECT ri.relay_controller_uuid
+        FROM public.rc_inputs ri
+        JOIN public.rc_events re ON ri.uuid = re.input_uuid
+        WHERE re.uuid = ra.event_uuid
+    )
+    AND ro.id = ra."output"
+    AND COALESCE(ro.slave_id, 0) = COALESCE(ra.slave_id, 0)
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM public.rc_outputs ro
+    WHERE ro.relay_controller_uuid = (
+        SELECT ri.relay_controller_uuid
+        FROM public.rc_inputs ri
+        JOIN public.rc_events re ON ri.uuid = re.input_uuid
+        WHERE re.uuid = ra.event_uuid
+    )
+    AND ro.id = ra."output"
+    AND COALESCE(ro.slave_id, 0) = COALESCE(ra.slave_id, 0)
+);
+  
+  
+ 
+select * from public.rc_events re 
+left join public.rc_actions ra on ra.event_uuid = re.uuid 
+where re.input_uuid = 'd9e2cad6-acd9-4c12-9dc1-d1a1ce43df02'
+
+
+
+d9e2cad6-acd9-4c12-9dc1-d1a1ce43df02
 
 select * from public.rc_actions ra 
 where ra.event_uuid in (select uuid from public.rc_events re where re.input_uuid = '654435bc-c5ef-40cd-9c68-37ee2aad5cf0')

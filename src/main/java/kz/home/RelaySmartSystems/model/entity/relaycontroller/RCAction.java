@@ -19,10 +19,14 @@ public class RCAction {
     private UUID uuid;
     @NotNull
     private Integer order;
-    private Integer output;
+//    private Integer output;
+//    private Integer slaveId;
+    //private UUID outputUuid;
+    @JoinColumn(name = "output_uuid", nullable=false)
+    @ManyToOne(optional = false)
+    private RCOutput output;
     private String action;
     private Integer duration; // только для action = wait
-    private Integer slaveId;
     @JoinColumn(name = "event_uuid", nullable=false)
     @ManyToOne(optional = false)
     private RCEvent event;
