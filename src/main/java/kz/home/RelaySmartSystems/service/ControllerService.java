@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -97,6 +98,7 @@ public class ControllerService {
 //                c.setDescription(info.getDescription());
                 c.setWifiRSSI(info.getWifiRSSI());
                 c.setModel(info.getModel());
+                c.setResetReason(info.getResetReason());
                 c.setStatus("online");
                 controllerRepository.save(c);
             }
@@ -131,4 +133,18 @@ public class ControllerService {
         Optional<Controller> c = controllerRepository.findById(uuid);
         return c.map(controller -> controller.getUser().equals(user)).orElse(false);
     }
+
+    @Transactional
+    public String deleteController(String mac) {
+        Controller c = controllerRepository.findByMac(mac);
+        if (c == null)
+            return "No controller found";
+        try {
+            controllerRepository.delete(c);
+        } catch (Exception e) {
+            return e.getLocalizedMessage();
+        }
+        return "OK";
+    }
+
 }

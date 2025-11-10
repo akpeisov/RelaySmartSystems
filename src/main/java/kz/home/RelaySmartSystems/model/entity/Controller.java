@@ -39,6 +39,7 @@ public class Controller {
     private Integer wifiRSSI;
     private Long crc;
     private String model;
+    private String resetReason;
     @LastModifiedDate
     private Date lastSeen;
 

@@ -350,7 +350,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         sendMessageToController(command.getMac(), WSTextMessage.send("SENDLOGS", payld));
                     } else if ("startOTA".equalsIgnoreCase(command.getCommand())) {
                         Map<String, Object> payld = new HashMap<>();
-                        payld.put("url", "https://akpeisov.kz/RelayController/relay32.bin"); // TODO : move it to env
+                        payld.put("url", "https://akpeisov.kz/RelayController.bin"); // TODO : move it to env
                         sendMessageToController(command.getMac(), WSTextMessage.send("OTA", payld));
                     } else if ("INFO".equalsIgnoreCase(command.getCommand())) {
                         sendMessageToController(command.getMac(), WSTextMessage.send("INFO", null));
@@ -377,6 +377,13 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         }
                     } else if ("TEST".equalsIgnoreCase(command.getCommand())) {
                         wsSession.sendMessage(new TextMessage(successMessage("Test ok")));
+                    } else if ("DELETE".equalsIgnoreCase(command.getCommand())) {
+                        res = controllerService.deleteController(command.getMac());
+                        if ("OK".equalsIgnoreCase(res)) {
+                            wsSession.sendMessage(new TextMessage(successMessage("Controller deleted")));
+                        } else {
+                            wsSession.sendMessage(new TextMessage(errorMessage(res)));
+                        }
                     }
                 }
                 break;
@@ -458,6 +465,34 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void handleTransportError(WebSocketSession session, Throwable exception) {
         logger.info("handleTransportError with ID {} {}", session.getId(), exception.getMessage());
     }
+
+//    @Override
+//    public boolean supportsPartialMessages() {
+//        return true;
+//    }
+
+//    @Override
+//    public void handlePartialMessage(WebSocketSession session, TextMessage message) throws Exception {
+//        // Собираем фрагменты сообщения в буфер, сохранённый в атрибутах сессии.
+//        // Когда получаем последний фрагмент, вызываем существующий handleTextMessage с объединённым сообщением.
+//        Map<String, Object> attrs = session.getAttributes();
+//        final String ATTR_KEY = "__partial_message_buffer";
+//        StringBuilder buf = (StringBuilder) attrs.get(ATTR_KEY);
+//        if (buf == null) {
+//            buf = new StringBuilder();
+//        }
+//        buf.append(message.getPayload());
+//        if (message.isLast()) {
+//            // полный текст собран — удаляем буфер и передаём в обработчик полного сообщения
+//            attrs.remove(ATTR_KEY);
+//            TextMessage full = new TextMessage(buf.toString());
+//            // Вызов handleTextMessage для дальнейшей обработки, как для обычного полного сообщения
+//            handleTextMessage(session, full);
+//        } else {
+//            // сохраняем буфер и ждём следующих фрагментов
+//            attrs.put(ATTR_KEY, buf);
+//        }
+//    }
 
     public String sendMessageToController(String controllerId, String message) {
         if (controllerId == null)

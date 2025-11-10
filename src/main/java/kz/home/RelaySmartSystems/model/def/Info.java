@@ -18,4 +18,5 @@ public class Info {
     private String wifiIP;
     private String mac;
     private String model;
+    private String resetReason;
 }

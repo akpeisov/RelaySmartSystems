@@ -74,7 +74,6 @@ public class RCInput {
                         }
                     });
         }
-System.out.println("RCInput crc " + sb.toString());
         return Utils.getCRC(sb.toString());
     }
 }

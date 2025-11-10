@@ -150,12 +150,15 @@ public class RelayControllerMapper {
                         List<RCAction> newActions = new ArrayList<>();
                         for (RCActionDTO action : eventDTO.getActions()) {
                             RCAction newAction = new RCAction();
-                            BeanUtils.copyProperties(newAction, action);
-                            outputs.stream().filter(rcOutput -> rcOutput.getId().equals(action.getOutput())
+                            //BeanUtils.copyProperties(newAction, action);
+                            newAction.setAction(action.getAction());
+                            newAction.setDuration(action.getDuration());
+                            newAction.setOrder(action.getOrder());
+                            RCOutput out = outputs.stream().filter(rcOutput -> rcOutput.getId().equals(action.getOutput())
                                     && ((rcOutput.getSlaveId() == null && action.getSlaveId() == null)
                                     || (rcOutput.getSlaveId() != null && rcOutput.getSlaveId().equals(action.getSlaveId()))))
-                                    .findFirst()
-                                    .ifPresent(newAction::setOutput);
+                                    .findFirst().orElse(null);
+                            newAction.setOutput(out);
                             newAction.setEvent(newEvent);
                             newActions.add(newAction);
                         }
