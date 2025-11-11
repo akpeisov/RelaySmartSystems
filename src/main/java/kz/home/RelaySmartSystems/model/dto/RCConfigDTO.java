@@ -17,4 +17,5 @@ public class RCConfigDTO {
     private RCSchedulerDTO scheduler;
     private RCMqttDTO mqtt;
     private long crc;
+    private String username;
 }

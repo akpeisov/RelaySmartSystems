@@ -84,6 +84,10 @@ public class ControllerService {
         return controllerRepository.findByUser(user);
     }
 
+    public List<Controller> getAllControllers() {
+        return controllerRepository.findAll();
+    }
+
     public void setControllerInfo(Info info) {
         Controller c = controllerRepository.findByMac(info.getMac().toUpperCase());
         if (c != null) {

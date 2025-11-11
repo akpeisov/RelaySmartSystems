@@ -104,26 +104,6 @@ public class RCConfigMapper {
         List<RCInputDTO> inputs = relayControllerMapper.inputsToDTO(controller.getInputs());
         rcioConfigDTO.setInputs(inputs);
 
-        // для каждого action попытаться найти соответствующий output и прописать outputUuid
-//        if (inputs != null) {
-//            for (RCInputDTO inputDTO : inputs) {
-//                if (inputDTO.getEvents() == null) continue;
-//                for (RCEventDTO eventDTO : inputDTO.getEvents()) {
-//                    if (eventDTO.getActions() == null) continue;
-//                    for (RCActionDTO actionDTO : eventDTO.getActions()) {
-//                        if (actionDTO.getOutput() == null) continue;
-//                        try {
-//                            RCOutput out = rcOutputRepository.findOutput(controller.getUuid(), actionDTO.getOutput(), actionDTO.getSlaveId());
-//                            if (out != null) {
-//                                actionDTO.setOutputUuid(out.getUuid());
-//                            }
-//                        } catch (Exception ignored) {
-//                        }
-//                    }
-//                }
-//            }
-//        }
-
         rcConfigDTO.setIo(rcioConfigDTO);
         // modbus
         RCModbusConfigDTO rcModbusInfoDTO = relayControllerMapper.modbusToDTO(controller.getModbusConfig());
@@ -146,6 +126,8 @@ public class RCConfigMapper {
         rcConfigDTO.setScheduler(rcSchedulerMapper.toDto(controller.getScheduler()));
         // mqtt
         rcConfigDTO.setMqtt(rcMqttMapper.toDto(controller.getMqtt()));
+
+        rcConfigDTO.setUsername(controller.getUser() != null ? controller.getUser().getUsername() : null);
         return rcConfigDTO;
     }
 }

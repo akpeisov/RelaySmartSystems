@@ -1,5 +1,6 @@
 package kz.home.RelaySmartSystems.controller;
 
+import kz.home.RelaySmartSystems.model.Role;
 import kz.home.RelaySmartSystems.model.entity.Controller;
 import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.model.mapper.RCConfigMapper;
@@ -40,15 +41,21 @@ public class WebAPI {
     @GetMapping("/userDevices")
     public ResponseEntity<?> getUserDevices(HttpServletRequest request) {
         String username = (String) request.getAttribute("username");
-        // TODO : убрать заглушку
-        logger.info("username {}", username);
+        User user = userService.findByUsername(username);
+        logger.debug("username {}", username);
         if ("dev".equalsIgnoreCase(env) && username == null)
-            username = "user";
-
-        User user = userService.findByUsername(username); // orElse avoid optional cast conversion
+            username = "admin";
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
         // отдаем массив устройств
+        List<Controller> userControllers;
         List<Object> controllers = new ArrayList<>();
-        List<Controller> userControllers = controllerService.getUserControllers(user);
+        if (Role.ROLE_ADMIN.equals(user.getRole()) || Role.ROLE_AUDITOR.equals(user.getRole())) {
+            userControllers = controllerService.getAllControllers();
+        } else {
+            userControllers = controllerService.getUserControllers(user);
+        }
         for (Controller controller : userControllers) {
             if ("relayController".equalsIgnoreCase(controller.getType()) && controller instanceof RelayController rc) {
                 controllers.add(rcConfigMapper.RCtoDto(rc));

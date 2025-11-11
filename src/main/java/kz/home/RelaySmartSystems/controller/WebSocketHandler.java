@@ -544,6 +544,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         logger.info("sendMessageToWebUser. User {}. Message {}", user.getUsername(), message);
 
         for (WSSession session: wsSessions) {
+            // TODO : admin/auditor role
             if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {
                 try {
                     if (session.getSession().isOpen()) {

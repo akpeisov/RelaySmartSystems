@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.model.entity;
 
 import javax.persistence.*;
 
+import kz.home.RelaySmartSystems.model.Role;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,6 +22,7 @@ public class User {
     String username;
     String firstName;
     String lastName;
+    Role role = Role.ROLE_USER;
 
     public String getFio() {
         return this.firstName + " " + this.lastName;
