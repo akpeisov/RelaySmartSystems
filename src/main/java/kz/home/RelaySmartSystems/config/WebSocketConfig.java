@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.config;
 
 import kz.home.RelaySmartSystems.controller.WebSocketHandler;
 import kz.home.RelaySmartSystems.filters.JwtAuthorizationFilter;
+import kz.home.RelaySmartSystems.filters.IpHandshakeInterceptor;
 import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.RelayControllerService;
 import kz.home.RelaySmartSystems.service.SessionService;
@@ -34,7 +35,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new WebSocketHandler(controllerService,
-                relayControllerService, jwtAuthorizationFilter, userService, sessionService), "/ws").setAllowedOrigins("*");
+                relayControllerService, jwtAuthorizationFilter, userService, sessionService), "/ws")
+                .addInterceptors(new IpHandshakeInterceptor())
+                .setAllowedOrigins("*");
     }
 
     @Bean

@@ -22,6 +22,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -422,9 +424,22 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         // TODO : audit session
         WSSession wsSession = new WSSession(session);
-        String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
-        if (clientIpAddress == null && session.getRemoteAddress() != null) {
-            clientIpAddress = session.getRemoteAddress().toString();
+        String clientIpAddress = null;
+        Object attr = session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
+        if (attr instanceof String && !((String)attr).trim().isEmpty()) {
+            clientIpAddress = ((String)attr).trim();
+        }
+        if (clientIpAddress == null) {
+            // Попытка аккуратно получить IP из remoteAddress без порта (учитываем IPv6)
+            if (session.getRemoteAddress() != null) {
+                InetSocketAddress remote = session.getRemoteAddress();
+                InetAddress addr = remote.getAddress();
+                if (addr != null) {
+                    clientIpAddress = addr.getHostAddress();
+                } else {
+                    clientIpAddress = remote.getHostString();
+                }
+            }
         }
         wsSession.setClientIP(clientIpAddress);
         wsSessions.add(wsSession);

@@ -12,7 +12,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name = "sessions")
+@Table(name = "sessions", indexes = {
+        @Index(name = "idx_session_sessionId", columnList = "sessionId")})
 public class Session {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -25,4 +26,5 @@ public class Session {
     private String type;
     private String username;
     private String mac;
+    private String status;
 }

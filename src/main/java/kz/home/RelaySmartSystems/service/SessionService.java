@@ -17,34 +17,39 @@ public class SessionService {
         session.setSessionId(sessionId);
         session.setRemoteAddress(remoteAddr);
         session.setStartDate(new java.util.Date());
+        session.setStatus("ACTIVE");
         sessionRepository.save(session);
     }
 
     public void endSession(String sessionId) {
-        Session session = sessionRepository.findAll().stream()
-                .filter(s -> s.getSessionId().equals(sessionId))
-                .findFirst()
-                .orElse(null);
+        Session session = sessionRepository.findSessionIdBySessionId(sessionId);
+//        Session session = sessionRepository.findAll().stream()
+//                .filter(s -> s.getSessionId().equals(sessionId))
+//                .findFirst()
+//                .orElse(null);
         if (session != null) {
             session.setEndDate(new java.util.Date());
+            session.setStatus("FINISHED");
             sessionRepository.save(session);
         }
     }
 
     public void endAllSessions() {
-        for (Session session : sessionRepository.findAll()) {
-            if (session.getEndDate() == null) {
-                session.setEndDate(new java.util.Date());
-                sessionRepository.save(session);
-            }
-        }
+        sessionRepository.endAllSessions();
+//        for (Session session : sessionRepository.findAll()) {
+//            if (session.getEndDate() == null) {
+//                session.setEndDate(new java.util.Date());
+//                sessionRepository.save(session);
+//            }
+//        }
     }
 
     public void updateLastActive(String sessionId) {
-        Session session = sessionRepository.findAll().stream()
-                .filter(s -> s.getSessionId().equals(sessionId))
-                .findFirst()
-                .orElse(null);
+        Session session = sessionRepository.findSessionIdBySessionId(sessionId);
+//        Session session = sessionRepository.findAll().stream()
+//                .filter(s -> s.getSessionId().equals(sessionId))
+//                .findFirst()
+//                .orElse(null);
         if (session != null) {
             session.setLastActiveDate(new java.util.Date());
             sessionRepository.save(session);
@@ -52,10 +57,11 @@ public class SessionService {
     }
 
     public void setUsername(String sessionId, String username) {
-        Session session = sessionRepository.findAll().stream()
-                .filter(s -> s.getSessionId().equals(sessionId))
-                .findFirst()
-                .orElse(null);
+//        Session session = sessionRepository.findAll().stream()
+//                .filter(s -> s.getSessionId().equals(sessionId))
+//                .findFirst()
+//                .orElse(null);
+        Session session = sessionRepository.findSessionIdBySessionId(sessionId);
         if (session != null) {
             session.setUsername(username);
             session.setType("web");
@@ -64,10 +70,11 @@ public class SessionService {
     }
 
     public void setMac(String sessionId, String mac) {
-        Session session = sessionRepository.findAll().stream()
-                .filter(s -> s.getSessionId().equals(sessionId))
-                .findFirst()
-                .orElse(null);
+//        Session session = sessionRepository.findAll().stream()
+//                .filter(s -> s.getSessionId().equals(sessionId))
+//                .findFirst()
+//                .orElse(null);
+        Session session = sessionRepository.findSessionIdBySessionId(sessionId);
         if (session != null) {
             session.setMac(mac);
             session.setType("controller");
