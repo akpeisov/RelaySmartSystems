@@ -17,7 +17,6 @@ public class WSSession {
     private String controllerId;
     private String type;
     private User user;
-    private String username;
     private LocalDateTime connectionDate;
     private String clientIP;
     private boolean authorized = false;

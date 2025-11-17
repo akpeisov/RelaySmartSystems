@@ -129,7 +129,6 @@ public class ControllerService {
     }
 
     public void setOffline() {
-        // проверить контроллеры, которые могли отвалиться и выставить им offline
         controllerRepository.setOffline();
     }
 

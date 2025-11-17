@@ -125,6 +125,12 @@ public class RelayControllerService {
     @Transactional
     public String saveConfig(RCConfigDTO rcConfigDTO) {
         RelayController relayController = relayControllerRepository.findByMac(rcConfigDTO.getMac());
+        if (relayController != null) {
+            relayController.setName(rcConfigDTO.getName());
+            relayController.setDescription(rcConfigDTO.getDescription());
+        } else {
+            return "NOT_FOUND";
+        }
         String res = saveMBConfig(rcConfigDTO.getModbus(), rcConfigDTO.getMac());
         if (!"OK".equals(res))
             return res;

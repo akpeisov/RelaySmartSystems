@@ -27,4 +27,5 @@ public class Session {
     private String username;
     private String mac;
     private String status;
+    private String message;
 }

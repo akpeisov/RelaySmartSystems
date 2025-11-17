@@ -14,7 +14,6 @@ public class IpHandshakeInterceptor implements HandshakeInterceptor {
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
-        // Попытаемся получить реальный IP клиента из нескольких заголовков, которые обычно выставляет nginx или другие прокси.
         String ipAddress = null;
 
         // 1. X-Real-IP (часто устанавливается nginx)
@@ -32,22 +31,8 @@ public class IpHandshakeInterceptor implements HandshakeInterceptor {
         }
 
         if (isEmptyOrUnknown(ipAddress)) {
-            // 3. дополнительные заголовки, которые иногда используют прокси/балансировщики
-            String[] otherHeaders = {"Proxy-Client-IP", "WL-Proxy-Client-IP", "HTTP_X_FORWARDED_FOR"};
-            for (String h : otherHeaders) {
-                String val = request.getHeaders().getFirst(h);
-                if (!isEmptyOrUnknown(val)) {
-                    ipAddress = val;
-                    break;
-                }
-            }
-        }
-
-        if (isEmptyOrUnknown(ipAddress)) {
-            // 4. fallback на адрес, с которого пришло соединение к приложению (может быть IP nginx)
-            if (request.getRemoteAddress() != null) {
-                ipAddress = request.getRemoteAddress().toString();
-            }
+            request.getRemoteAddress();
+            ipAddress = request.getRemoteAddress().getAddress().getHostAddress();
         }
 
         attributes.put(CLIENT_IP_ADDRESS_KEY, ipAddress);
@@ -61,6 +46,5 @@ public class IpHandshakeInterceptor implements HandshakeInterceptor {
     @Override
     public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                WebSocketHandler wsHandler, Exception exception) {
-        // Не используется
     }
 }

@@ -69,7 +69,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
 
         String payload = message.getPayload();
-        logger.info(payload);
+        logger.debug(payload);
 
         byte[] json;
         WSTextMessage wsTextMessage;
@@ -97,8 +97,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-
-        // TODO : разделить запросы и ответы от контроллеров и фронта (только хэллоу общий)
         String res;
 
         switch (type) {
@@ -128,27 +126,26 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     sessionService.setMac(session.getId(), mac);
                     // если контроллера нет, то запросить его конфиг
                     if (controllerService.findController(mac) == null) {
-                        logger.info("Controller {} not found. Request config", mac);
+                        logger.debug("Controller {} not found. Request config", mac);
                         session.sendMessage(new TextMessage(getCmdMessage("GETDEVICECONFIG")));
                         break;
                     } else {
+                        controllerService.setControllerOnline(mac);
                         if (controllerService.isControllerLinked(mac)) {
                             wsSession.setUser(controllerService.findControllerOwner(mac));
                         }
                     }
                 } else if (tokenData.getUsername() != null) {
                     // Это клиент фронта
-                    //setUsernameForWSSession(session, tokenData.getUsername());
                     sessionService.setUsername(session.getId(), tokenData.getUsername());
-                    wsSession.setUsername(tokenData.getUsername());
+                    //wsSession.setUsername(tokenData.getUsername());
                     User user = userService.findByUsername(tokenData.getUsername());
                     if (user != null) {
                         wsSession.setUser(user);
-                        //setUserForWSSession(session, user);
                     } else {
-                        logger.info("User by username not found {}", tokenData.getUsername());
+                        logger.error("User by username not found {}", tokenData.getUsername());
                         session.sendMessage(new TextMessage(errorMessage("User not found!")));
-                        session.close();
+                        session.close(CloseStatus.GOING_AWAY);
                         break;
                     }
                 } else {
@@ -159,6 +156,10 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 //setTypeForWSSession(session, hello.getType());
                 wsSession.setAuthorized(true);
                 session.sendMessage(new TextMessage(getCmdMessage("AUTHORIZED")));
+                if ("web".equalsIgnoreCase(wsSession.getType()))
+                    logger.info("Web client connected. Username {}", wsSession.getUser().getUsername());
+                else
+                    logger.info("Controller connected. Mac {}. Owner {}", wsSession.getControllerId(), wsSession.getUser() != null ? wsSession.getUser().getUsername() : "none");
                 break;
 
             case "DEVICECONFIG":
@@ -194,7 +195,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     // результат обновления конфига от контроллера
                     Message msg = objectMapper.readValue(json, Message.class);
                     if (msg.getMessage() != null) {
-                        logger.info("DEVICECONFIGRESPONSE msg {}", msg.getMessage());
+                        logger.debug("DEVICECONFIGRESPONSE msg {}", msg.getMessage());
                         if ("OK".equalsIgnoreCase(msg.getMessage())) {
                             sendMessageToWebUser(wsSession.getUser(), successMessage("Upload successful"));
                         } else {
@@ -211,7 +212,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     controllerService.setControllerInfo(info);
                     // send to web
                     WSTextMessage wsMsg = new WSTextMessage("INFO", info);
-                    //logger.warn(wsMsg.makeMessage());
                     sendMessageToWebUser(wsSession.getUser(), wsMsg.makeMessage());
                 }
                 break;
@@ -229,8 +229,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
             case "UPDATE":
                 // обновление состояния входов/выходов в базе и отправка на фронт
-//            {"type":"UPDATE","payload":{"mac":"C8F09E311008","input":16,"state":"long"}}
-                // проверить линковку
+                // проверить линковку {"type":"UPDATE","payload":{"mac":"C8F09E311008","input":16,"state":"long"}}
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     RCUpdateDTO update = objectMapper.readValue(json, RCUpdateDTO.class);
                     if (update.getOutput() != null) {
@@ -241,7 +240,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                             // проверить есть ли запрос на линковку в веб сессии
                             WSSession linkSession = findSessionForLinkRequest(update.getMac());
                             if (linkSession != null) {
-                                logger.info("Link request ok");
+                                logger.info("Link request ok for mac {}", wsSession.getControllerId());
                                 if (controllerService.linkController(update.getMac(), linkSession.getUser()).equalsIgnoreCase("OK")) {
                                     linkSession.getSession().sendMessage(new TextMessage(WSTextMessage.send("LINKOK", null)));
                                     wsSession.setUser(linkSession.getUser());
@@ -253,10 +252,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     }
                     // отправить уведомление владельцу контроллера
                     if (wsSession.getUser() != null) {
-                        //logger.info(String.format("User found %s", user.getFio()));
                         sendMessageToWebUser(wsSession.getUser(), wsTextMessage.makeMessage());
                     } else {
-                        logger.info("UPDATE. No user session found");
+                        logger.debug("UPDATE. No user session found");
                     }
                 }
                 break;
@@ -266,11 +264,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     ActionDTO actionDTO = objectMapper.readValue(json, ActionDTO.class);
                     User user = controllerService.findControllerOwner(actionDTO.getMac());
-                    if (user != null && user.equals(wsSession.getUser())) {
-                        logger.info("Sending message {} to controller {}", actionDTO.getAction(), actionDTO.getMac());
+                    if ((wsSession.getUser() != null && wsSession.getUser().isAdmin()) ||
+                            (user != null && user.equals(wsSession.getUser()))) {
+                        logger.debug("Sending message {} to controller {}", actionDTO.getAction(), actionDTO.getMac());
                         sendMessageToController(actionDTO.getMac(), wsTextMessage.makeMessage());
                     } else {
-                        logger.error("Action message to {} with incorrect owner {}", actionDTO.getMac(), wsSession.getUser().getUsername());
+                        logger.debug("Action message to {} with incorrect owner {}", actionDTO.getMac(), wsSession.getUser().getUsername());
                     }
                 }
                 break;
@@ -341,7 +340,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "COMMAND":
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     Command command = objectMapper.readValue(json, Command.class);
-                    logger.info("Command {}, mac {}", command.getCommand(), command.getMac());
+                    logger.debug("Command {}, mac {}", command.getCommand(), command.getMac());
                     if ("enableSendLogs".equalsIgnoreCase(command.getCommand())) {
                         Map<String, Object> payld = new HashMap<>();
                         payld.put("send", true);
@@ -397,8 +396,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 break;
 
             default:
-                logger.warn("Unknown message {}", type);
-                logger.info(wsTextMessage.getPayload().toString());
+                logger.error("Type {}. Unknown message {}", type, wsTextMessage.getPayload().toString());
                 session.sendMessage(new TextMessage(errorMessage("Unknown message")));
                 break;
         }
@@ -422,92 +420,64 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        // TODO : audit session
         WSSession wsSession = new WSSession(session);
-        String clientIpAddress = null;
-        Object attr = session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
-        if (attr instanceof String && !((String)attr).trim().isEmpty()) {
-            clientIpAddress = ((String)attr).trim();
-        }
-        if (clientIpAddress == null) {
-            // Попытка аккуратно получить IP из remoteAddress без порта (учитываем IPv6)
-            if (session.getRemoteAddress() != null) {
-                InetSocketAddress remote = session.getRemoteAddress();
-                InetAddress addr = remote.getAddress();
-                if (addr != null) {
-                    clientIpAddress = addr.getHostAddress();
-                } else {
-                    clientIpAddress = remote.getHostString();
-                }
-            }
-        }
+        String clientIpAddress = (String) session.getAttributes().get(IpHandshakeInterceptor.CLIENT_IP_ADDRESS_KEY);
         wsSession.setClientIP(clientIpAddress);
         wsSessions.add(wsSession);
-        logger.info("New client connected with ID {} remote IP {} client IP {}", session.getId(), session.getRemoteAddress(), clientIpAddress);
+        logger.debug("New client connected with ID {} client IP {}", session.getId(), clientIpAddress);
         sessionService.addSession(session.getId(), clientIpAddress);
         super.afterConnectionEstablished(session);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        Throwable lastError = (Throwable) session.getAttributes().get("lastError");
+        String message;
+        if (lastError != null) {
+            message = lastError.getMessage();
+        } else {
+            message = status.getReason();
+        }
+        sessionService.endSession(session.getId(), String.format("%d%s", status.getCode(), message == null ? "" : ", " + message));
         // find current controller and set offline
-        // TODO : audit session
-        sessionService.endSession(session.getId());
         String mac = getControllerIdForWSSession(session);
         if (mac != null)
             controllerService.setControllerOffline(mac);
-        String type = "";
-        WSSession sessionToDel = null;
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(session)) {
-                type = wsSession.getType();
-                sessionToDel = wsSession;
-                break;
-            }
-        }
-        if (sessionToDel != null)
-            wsSessions.remove(sessionToDel);
-        if ("web".equalsIgnoreCase(type)) {
-            logger.info("Client {} disconnected with ID {}. Status {}", type, session.getId(), status);
-        } else {
-            logger.info("Client {} with mac {} disconnected", type, mac);
-        }
+        logger.debug("Client {} disconnected. Code {}, reason {}", mac == null ? "web " + session.getId() : "controller " + mac, status.getCode(), status.getReason());
+
+        wsSessions.removeIf(s -> s.getSession().equals(session));
+
+//        String type = "";
+//        WSSession sessionToDel = null;
+//        wsSessions.stream().filter(s -> s.getSession().equals(session)).findFirst().ifPresent(s -> {
+//            type = wsSession.getType();
+//            sessionToDel = wsSession;
+//            //logger.debug("Removing session for {}", s.getSession().getId());
+//        });
+//
+//        for (WSSession wsSession : wsSessions) {
+//            if (wsSession.getSession().equals(session)) {
+//                type = wsSession.getType();
+//                sessionToDel = wsSession;
+//                break;
+//            }
+//        }
+//        if (sessionToDel != null)
+//            wsSessions.remove(sessionToDel);
+//        if ("web".equalsIgnoreCase(type)) {
+//            logger.debug("Client {} disconnected with ID {}. Status {}", type, session.getId(), status);
+//        } else {
+//            logger.debug("Client {} with mac {} disconnected", type, mac);
+//        }
 
         super.afterConnectionClosed(session, status);
     }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) {
-        logger.info("handleTransportError with ID {} {}", session.getId(), exception.getMessage());
+        logger.error("handleTransportError with ID {} {}", session.getId(), exception.getMessage());
+        session.getAttributes().put("lastError", exception);
     }
-
-//    @Override
-//    public boolean supportsPartialMessages() {
-//        return true;
-//    }
-
-//    @Override
-//    public void handlePartialMessage(WebSocketSession session, TextMessage message) throws Exception {
-//        // Собираем фрагменты сообщения в буфер, сохранённый в атрибутах сессии.
-//        // Когда получаем последний фрагмент, вызываем существующий handleTextMessage с объединённым сообщением.
-//        Map<String, Object> attrs = session.getAttributes();
-//        final String ATTR_KEY = "__partial_message_buffer";
-//        StringBuilder buf = (StringBuilder) attrs.get(ATTR_KEY);
-//        if (buf == null) {
-//            buf = new StringBuilder();
-//        }
-//        buf.append(message.getPayload());
-//        if (message.isLast()) {
-//            // полный текст собран — удаляем буфер и передаём в обработчик полного сообщения
-//            attrs.remove(ATTR_KEY);
-//            TextMessage full = new TextMessage(buf.toString());
-//            // Вызов handleTextMessage для дальнейшей обработки, как для обычного полного сообщения
-//            handleTextMessage(session, full);
-//        } else {
-//            // сохраняем буфер и ждём следующих фрагментов
-//            attrs.put(ATTR_KEY, buf);
-//        }
-//    }
 
     public String sendMessageToController(String controllerId, String message) {
         if (controllerId == null)
@@ -531,40 +501,22 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
             })
             .orElse("NOT_FOUND");
-//        for (WSSession session: wsSessions) {
-//            if ("relayController".equalsIgnoreCase(session.getType()) &&
-//                    controllerId.equalsIgnoreCase(session.getControllerId())) {
-//                try {
-//                    if (session.getSession().isOpen()) {
-//                        session.sendMessage(new TextMessage(message));
-//                        return "OK";
-//                    }
-//                } catch (IOException e) {
-//                    logger.error(e.getLocalizedMessage());
-//                    return "ERROR";
-//                }
-//                break;
-//            }
-//        }
-//        return "NOT_FOUND";
     }
 
     public void sendMessageToWebUser(User user, String message) {
         // Отправка сообщения во все пользовательские сессии
         if (user == null) {
-            logger.error("sendMessageToWebUser. User is null");
+            logger.debug("sendMessageToWebUser. User is null");
             return;
         }
-
-        logger.info("sendMessageToWebUser. User {}. Message {}", user.getUsername(), message);
-
+        logger.debug("sendMessageToWebUser. User {}. Message {}", user.getUsername(), message);
         for (WSSession session: wsSessions) {
-            // TODO : admin/auditor role
-            if ("web".equalsIgnoreCase(session.getType()) && user.equals(session.getUser())) {
+            if ("web".equalsIgnoreCase(session.getType()) &&
+                    (user.equals(session.getUser()) || Role.ROLE_ADMIN.equals(session.getUser().getRole()))) {
                 try {
                     if (session.getSession().isOpen()) {
                         session.sendMessage(new TextMessage(message));
-                        logger.info("Message to user {} sent", user.getFio());
+                        logger.debug("Message to user {} sent", user.getFio());
                     }
                 } catch (IOException e) {
                     logger.error(e.getLocalizedMessage());
@@ -589,91 +541,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
     private boolean isControllerOnline(String mac) {
         if (mac == null)
             return false;
-        for (WSSession wsSession : wsSessions) {
-            if (mac.equalsIgnoreCase(wsSession.getControllerId())) {
-                return true;
-            }
-        }
-        return false;
+        return wsSessions.stream().anyMatch(session -> mac.equalsIgnoreCase(session.getControllerId()));
     }
-
-    /*
-    private void setControllerIdForWSSession(WebSocketSession targetSession, String controllerId) {
-        if (controllerId == null)
-            return;
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                wsSession.setControllerId(controllerId.toUpperCase());
-                break;
-            }
-        }
-    }
-
-    private void setUsernameForWSSession(WebSocketSession targetSession, String username) {
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                wsSession.setUsername(username);
-                break;
-            }
-        }
-    }
-
-    private void setTypeForWSSession(WebSocketSession targetSession, String type) {
-        if (type == null)
-            return;
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                wsSession.setType(type);
-                break;
-            }
-        }
-    }
-
-    private void setUserForWSSession(WebSocketSession targetSession, User user) {
-        // установить владельца для сессии устройства
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                wsSession.setUser(user);
-                break;
-            }
-        }
-    }
-
-    private String getTypeForWSSession(WebSocketSession targetSession) {
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                return wsSession.getType();
-            }
-        }
-        return null;
-    }
-
-    private User getUserForWSSession(WebSocketSession targetSession) {
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                return wsSession.getUser();
-            }
-        }
-        return null;
-    }
-
-    boolean isControllerLinked(String mac) {
-        // вернет true если контроллер привязан к пользователю
-        return controllerService.isControllerLinked(mac);
-    }
-
-    public List<WSSession> getCurrentWSSessions() {
-        return wsSessions;
-    }
-    */
 
     private String getControllerIdForWSSession(WebSocketSession targetSession) {
-        for (WSSession wsSession : wsSessions) {
-            if (wsSession.getSession().equals(targetSession)) {
-                return wsSession.getControllerId();
-            }
-        }
-        return null;
+        Optional<WSSession> session = wsSessions.stream()
+                .filter(s -> s.getSession().equals(targetSession))
+                .findFirst();
+        return session.map(WSSession::getControllerId).orElse(null);
     }
 
     @Scheduled(fixedRate = 5000)

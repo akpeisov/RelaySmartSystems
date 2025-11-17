@@ -35,4 +35,8 @@ public class User {
         }
         return username.equalsIgnoreCase(u.getUsername());
     }
+
+    public boolean isAdmin() {
+        return Role.ROLE_ADMIN.equals(this.role);
+    }
 }

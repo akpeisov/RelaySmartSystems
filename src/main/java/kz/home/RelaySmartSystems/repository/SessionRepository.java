@@ -2,6 +2,7 @@ package kz.home.RelaySmartSystems.repository;
 
 import kz.home.RelaySmartSystems.model.entity.Session;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import javax.transaction.Transactional;
@@ -13,6 +14,7 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
     Session findSessionIdBySessionId(String sessionId);
 
     @Transactional
+    @Modifying
     @Query("UPDATE Session s SET s.endDate = CURRENT_TIMESTAMP, s.status = 'TERMINATED' WHERE s.endDate IS NULL")
-    void endAllSessions();
+    int endAllSessions();
 }

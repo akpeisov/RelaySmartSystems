@@ -104,7 +104,11 @@ hsEOoRXDPxct0Wbcz94jwjI=
       config.io.inputs.forEach(i => {
         state.inputs[i.id] = i;
       });
-      config.io.outputs.forEach(o => state.outputs[o.id] = o);
+      //config.io.outputs.forEach(o => state.outputs[o.id] = o);
+      config.io.outputs.forEach(o => {
+        const key = `${o.id}_${o.slaveId}`;
+        state.outputs[key] = o;
+      });
 
       document.getElementById('info').innerHTML = `
         <strong>MAC:</strong> ${config.mac} |
@@ -134,7 +138,7 @@ hsEOoRXDPxct0Wbcz94jwjI=
       inputs.forEach(input => {
         const td = document.createElement('td');
         td.innerHTML = `${input.name} <span class="circle ${input.state === 'on' ? 'green' : 'gray'}"></span>`;
-        td.onclick = () => toggleState('input', input.id);
+        td.onclick = () => toggleState('input', input.id, input.slaveId);
         inputRow.appendChild(td);
       });
 
@@ -146,9 +150,10 @@ hsEOoRXDPxct0Wbcz94jwjI=
       });
 
       outputs.forEach(output => {
+        console.log(output);
         const td = document.createElement('td');
-        td.innerHTML = `${output.name} <span class="circle ${output.state === 'on' ? 'green' : 'gray'}"></span>`;
-        td.onclick = () => toggleState('output', output.id);
+        td.innerHTML = `${output.name}&nbsp;<b>${output.slaveId}</b> <span class="circle ${output.state === 'on' ? 'green' : 'gray'}"></span>`;
+        td.onclick = () => toggleState('output', output.id, output.slaveId);
         outputRow.appendChild(td);
       });
 
@@ -157,8 +162,8 @@ hsEOoRXDPxct0Wbcz94jwjI=
       table.appendChild(outputRow);
     }
 
-    function toggleState(type, id) {
-      let obj = type === 'input' ? state.inputs[id] : state.outputs[id];
+    function toggleState(type, id, slaveid) {
+      let obj = type === 'input' ? state.inputs[id] : state.outputs[id+"_"+slaveid];
       obj.state = obj.state === 'on' ? 'off' : 'on';
       renderTable();
 
@@ -168,7 +173,8 @@ hsEOoRXDPxct0Wbcz94jwjI=
           payload: {
             mac: config.mac,
             [type]: id,
-            state: obj.state
+            state: obj.state,
+            slaveId: slaveid
           }
         };
         ws.send(JSON.stringify(payload));
@@ -182,14 +188,22 @@ hsEOoRXDPxct0Wbcz94jwjI=
       renderTable();
     }
 
-    function handleOutputAction(actionDTO) {
-      const output = state.outputs[actionDTO.output];
-      if (!output) return;
-      if (actionDTO.actionDTO === 'toggle') {
+    function handleOutputAction(outputid, action, slaveId) {
+//console.log(outputid, action, slaveId);
+//console.log(actionDTO);
+//console.log(outputid);
+//console.log(state.outputs);
+
+      const key = outputid+"_"+slaveId;
+      //const output = state.outputs[outputid];
+      const output = state.outputs[key];
+
+//      if (!output) return;
+      if (action === 'toggle') {
         output.state = output.state === 'on' ? 'off' : 'on';
-      } else if (actionDTO.actionDTO === 'on') {
+      } else if (action === 'on') {
         output.state = 'on';
-      } else if (actionDTO.actionDTO === 'off') {
+      } else if (action === 'off') {
         output.state = 'off';
       }
 
@@ -198,7 +212,7 @@ hsEOoRXDPxct0Wbcz94jwjI=
           type: "UPDATE",
           payload: {
             mac: config.mac,
-            output: output.id,
+            output: outputid,
             state: output.state
           }
         }));
@@ -232,10 +246,13 @@ hsEOoRXDPxct0Wbcz94jwjI=
     }
 
     function handleIncomingMessage(msg) {
+      //console.log(msg.payload);
       if (msg.type === 'ACTION') {
-        const { output, input, actionDTO } = msg.payload;
+        const { output, input, action, slaveId } = msg.payload;
+//console.log(output, input, action);
         if (output !== undefined) {
-          handleOutputAction({ output, actionDTO });
+//console.log('out ', output);
+          handleOutputAction(output, action, slaveId);
           renderTable();
         } else if (input !== undefined) {
           const inp = state.inputs[input];
