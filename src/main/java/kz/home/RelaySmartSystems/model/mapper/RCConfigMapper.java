@@ -96,6 +96,7 @@ public class RCConfigMapper {
         rcConfigDTO.setDescription(controller.getDescription());
         rcConfigDTO.setModel(controller.getModel());
         rcConfigDTO.setStatus(controller.getStatus());
+        rcConfigDTO.setLastSeen(controller.getLastSeen());
         // io
         RCIOConfigDTO rcioConfigDTO = new RCIOConfigDTO();
         rcioConfigDTO.setOutputs(relayControllerMapper.outputsToDTO(controller.getOutputs()));

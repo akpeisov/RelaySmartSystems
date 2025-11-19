@@ -3,6 +3,8 @@ package kz.home.RelaySmartSystems.model.dto;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
+import java.util.Date;
+
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RCConfigDTO {
@@ -18,4 +20,5 @@ public class RCConfigDTO {
     private RCMqttDTO mqtt;
     private long crc;
     private String username;
+    private Date lastSeen;
 }

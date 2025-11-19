@@ -366,7 +366,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                                 res = sendMessageToController(command.getMac(), deviceConfig);
                                 logger.info("sendMessageToController {}", res);
                                 if ("OK".equalsIgnoreCase(res)) {
-                                    wsSession.sendMessage(new TextMessage(successMessage("Successfully")));
+                                    wsSession.sendMessage(new TextMessage(successMessage("Successfully sent")));
                                 } else {
                                     wsSession.sendMessage(new TextMessage(errorMessage(res)));
                                 }
@@ -392,6 +392,15 @@ public class WebSocketHandler extends TextWebSocketHandler {
             case "LOG":
                 if (!"web".equalsIgnoreCase(wsSession.getType())) {
                     sendMessageToWebUser(wsSession.getUser(), wsTextMessage.makeMessage());
+                }
+                break;
+
+            case "ERROR":
+                // получение ошибки от контроллера
+                if (!"web".equalsIgnoreCase(wsSession.getType())) {
+                    Message msg = objectMapper.readValue(json, Message.class);
+                    logger.error("Error from controller {}: {}", wsSession.getControllerId(), msg.getMessage());
+                    sendMessageToWebUser(wsSession.getUser(), errorMessage(msg.getMessage()));
                 }
                 break;
 
@@ -443,7 +452,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         String mac = getControllerIdForWSSession(session);
         if (mac != null)
             controllerService.setControllerOffline(mac);
-        logger.debug("Client {} disconnected. Code {}, reason {}", mac == null ? "web " + session.getId() : "controller " + mac, status.getCode(), status.getReason());
+        logger.info("Client {} disconnected. Code {}, reason {}", mac == null ? "web " + session.getId() : "controller " + mac, status.getCode(), status.getReason());
 
         wsSessions.removeIf(s -> s.getSession().equals(session));
 
