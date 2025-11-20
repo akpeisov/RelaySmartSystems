@@ -21,4 +21,5 @@ public class RCConfigDTO {
     private long crc;
     private String username;
     private Date lastSeen;
+    private String hwParams;
 }

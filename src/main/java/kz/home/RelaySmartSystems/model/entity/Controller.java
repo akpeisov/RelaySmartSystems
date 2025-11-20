@@ -40,6 +40,7 @@ public class Controller {
     private Long crc;
     private String model;
     private String resetReason;
+    private String hwParams;
     @LastModifiedDate
     private Date lastSeen;
 

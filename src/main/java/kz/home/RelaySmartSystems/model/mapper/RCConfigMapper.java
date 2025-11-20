@@ -16,17 +16,14 @@ public class RCConfigMapper {
     private final RCModbusConfigRepository modbusConfigRepository;
     private final RCSchedulerMapper rcSchedulerMapper;
     private final RCMqttMapper rcMqttMapper;
-    private final RCOutputRepository rcOutputRepository;
     public RCConfigMapper(RelayControllerMapper relayControllerMapper,
                           RCModbusConfigRepository modbusConfigRepository,
                           RCSchedulerMapper rcSchedulerMapper,
-                          RCMqttMapper rcMqttMapper,
-                          RCOutputRepository rcOutputRepository) {
+                          RCMqttMapper rcMqttMapper) {
         this.relayControllerMapper = relayControllerMapper;
         this.modbusConfigRepository = modbusConfigRepository;
         this.rcSchedulerMapper = rcSchedulerMapper;
         this.rcMqttMapper = rcMqttMapper;
-        this.rcOutputRepository = rcOutputRepository;
     }
 
     private NetworkConfigDTO networkToDto(NetworkConfig networkConfig) {
@@ -97,6 +94,7 @@ public class RCConfigMapper {
         rcConfigDTO.setModel(controller.getModel());
         rcConfigDTO.setStatus(controller.getStatus());
         rcConfigDTO.setLastSeen(controller.getLastSeen());
+        rcConfigDTO.setHwParams(controller.getHwParams());
         // io
         RCIOConfigDTO rcioConfigDTO = new RCIOConfigDTO();
         rcioConfigDTO.setOutputs(relayControllerMapper.outputsToDTO(controller.getOutputs()));

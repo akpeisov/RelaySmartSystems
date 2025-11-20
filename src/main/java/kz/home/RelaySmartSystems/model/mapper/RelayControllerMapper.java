@@ -114,6 +114,7 @@ public class RelayControllerMapper {
         relayController.setModel(rcConfigDTO.getModel());
         relayController.setType("relayController");
         relayController.setCrc(rcConfigDTO.getCrc());
+        relayController.setHwParams(rcConfigDTO.getHwParams());
 
         // outputs
         List<RCOutput> outputs = new ArrayList<>();

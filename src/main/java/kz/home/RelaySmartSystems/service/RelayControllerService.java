@@ -128,6 +128,7 @@ public class RelayControllerService {
         if (relayController != null) {
             relayController.setName(rcConfigDTO.getName());
             relayController.setDescription(rcConfigDTO.getDescription());
+            relayController.setHwParams(rcConfigDTO.getHwParams());
         } else {
             return "NOT_FOUND";
         }

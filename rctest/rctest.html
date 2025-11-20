@@ -47,6 +47,8 @@
 <body>
   <div id="info"></div>
   <button id="sendConfigBtn">Отправить конфиг</button>
+  <button id="connectBtn">Connect</button>
+  <button id="disconnectBtn">Disconnect</button>
   <table id="ioTable"></table>
   <div id="log"></div>
 
@@ -84,7 +86,8 @@ NTHSFDyyrHM/UeqtMA0J1uelpX9JHDa4OXjOzs2+e5DjC0/VNGfCjyp0fWuuk71H
 dA6fLtLIAllGQ0c3soohXDKRHtAEmeiri5MOHvlQieR3dpkRXwRWyh91/llFWGul
 hsEOoRXDPxct0Wbcz94jwjI=
 -----END PRIVATE KEY-----`;
-
+  
+    
 
     async function generateJwtToken(mac) {
       const alg = 'RS256';
@@ -100,7 +103,7 @@ hsEOoRXDPxct0Wbcz94jwjI=
     async function init() {
       const res = await fetch('config.json');
       config = await res.json();
-
+      
       config.io.inputs.forEach(i => {
         state.inputs[i.id] = i;
       });
@@ -118,6 +121,8 @@ hsEOoRXDPxct0Wbcz94jwjI=
       `;
 
       document.getElementById('sendConfigBtn').onclick = sendConfig;
+      document.getElementById('connectBtn').onclick = connect;
+      document.getElementById('disconnectBtn').onclick = disconnect;
 
       renderTable();
       connectWebSocket(config.mac);
@@ -150,7 +155,7 @@ hsEOoRXDPxct0Wbcz94jwjI=
       });
 
       outputs.forEach(output => {
-        console.log(output);
+        //console.log(output);
         const td = document.createElement('td');
         td.innerHTML = `${output.name}&nbsp;<b>${output.slaveId}</b> <span class="circle ${output.state === 'on' ? 'green' : 'gray'}"></span>`;
         td.onclick = () => toggleState('output', output.id, output.slaveId);
@@ -178,6 +183,7 @@ hsEOoRXDPxct0Wbcz94jwjI=
           }
         };
         ws.send(JSON.stringify(payload));
+        console.log('ws', JSON.stringify(payload));
       }
     }
 
@@ -196,6 +202,10 @@ hsEOoRXDPxct0Wbcz94jwjI=
 
       const key = outputid+"_"+slaveId;
       //const output = state.outputs[outputid];
+      if (state.outputs[key] == null) {
+        console.log('no output found', key);
+        return;
+      }
       const output = state.outputs[key];
 
 //      if (!output) return;
@@ -208,21 +218,23 @@ hsEOoRXDPxct0Wbcz94jwjI=
       }
 
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
+        const msg = JSON.stringify({
           type: "UPDATE",
           payload: {
             mac: config.mac,
             output: outputid,
-            state: output.state
+            state: output.state,
+            slaveId: slaveId
           }
-        }));
+        }); 
+        ws.send(msg);
+        console.log('ws2', msg);
       }
     }
 
     async function connectWebSocket(mac) {
       const url = config.ws.replace('http', 'ws');
       ws = new WebSocket(url);
-
       ws.onopen = async () => {
         const token = await generateJwtToken(mac);
         ws.send(JSON.stringify({
@@ -276,6 +288,16 @@ hsEOoRXDPxct0Wbcz94jwjI=
         }));
         log('Sent device config');
       }
+    }
+
+    function connect() {
+      console.log('connect')
+      connectWebSocket(config.mac);
+    }
+
+    function disconnect() {
+      console.log('disconnect')
+      ws.close();
     }
 
     function log(message) {
