@@ -5,41 +5,56 @@ on:
       - main
 
 jobs:
-  build-deploy:
-    name: build and deploy spring-api
+  build-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-20.04
     steps:
-      - name: checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: setup jdk 17
+      - name: Setup JDK 17
         uses: actions/setup-java@v3
         with:
-          distribution: 'temirin'
+          distribution: 'temurin'
           java-version: 17
 
-      - name: build the app
-        run: |
-          mvn clean
-          mvn -B package --file pom.xml
-      - name: build the docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          dockerfile: Dockerfile
-          push: false
-          tags: akpeisov/rss:prod
+      - name: Build the app
+        run: mvn clean package -B
 
-      - name: login to docker hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: push the docker image to docker hub
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v4
         with:
           context: .
           dockerfile: Dockerfile
           push: true
           tags: akpeisov/rss:prod
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull akpeisov/rss:prod
+            docker stop rss || true
+            docker rm rss || true
+            docker run -d \
+              --name rss \
+              -e SERVER_PORT=8880 \
+              -e JDBC_URL=${{ secrets.JDBC_URL }} \
+              -e JDBC_USER=${{ secrets.JDBC_USER }} \
+              -e JDBC_PASS=${{ secrets.JDBC_PASSWORD }} \
+              -e CONTROLLER_KEY=${{ secrets.CONTROLLER_KEY }} \
+              -e FRONT_KEY=${{ secrets.FRONT_KEY }} \
+              akpeisov/rss:prod
