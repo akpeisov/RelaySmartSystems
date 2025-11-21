@@ -1,5 +1,6 @@
 #FROM openjdk:17-jdk-slim
-FROM openjdk:17-jdk-alpine
+#FROM openjdk:17-jdk-alpine
+FROM eclipse-temurin:17
 
 #ENV TZ="Asia/Almaty"
 ENV TZ="Asia/Tashkent"
