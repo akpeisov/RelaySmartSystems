@@ -37,7 +37,7 @@ jobs:
 
   deploy:
     needs: build-push
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@master
