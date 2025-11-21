@@ -33,29 +33,4 @@ jobs:
           context: .
           dockerfile: Dockerfile
           push: true
-          tags: akpeisov/rss:prod
-
-  deploy:
-    needs: build-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 221
-          script: |
-            docker pull akpeisov/rss:prod
-            docker stop rss || true
-            docker rm rss || true
-            docker run -d \
-              --name rss \
-              -e SERVER_PORT=8880 \
-              -e JDBC_URL=${{ secrets.JDBC_URL }} \
-              -e JDBC_USER=${{ secrets.JDBC_USER }} \
-              -e JDBC_PASS=${{ secrets.JDBC_PASSWORD }} \
-              -e CONTROLLER_KEY=${{ secrets.CONTROLLER_KEY }} \
-              -e FRONT_KEY=${{ secrets.FRONT_KEY }} \
-              akpeisov/rss:prod
+          tags: akpeisov/rss:prod 
