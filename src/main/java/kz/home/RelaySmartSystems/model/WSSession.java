@@ -1,31 +1,31 @@
 package kz.home.RelaySmartSystems.model;
 
+import kz.home.RelaySmartSystems.model.entity.User;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Date;
 
+@Setter
+@Getter
 public class WSSession {
     private WebSocketSession session;
     private String controllerId;
     private String type;
     private User user;
-    private String username;
     private LocalDateTime connectionDate;
     private String clientIP;
     private boolean authorized = false;
     private Object obj;
+    private Date lastSend = new Date();
 
     public WSSession(WebSocketSession session) {
         this.session = session;
-    }
-
-    public WebSocketSession getSession() {
-        return session;
-    }
-
-    public void setSession(WebSocketSession session) {
-        this.session = session;
+        this.connectionDate = LocalDateTime.now();
     }
 
     public String getControllerId() {
@@ -40,55 +40,13 @@ public class WSSession {
         return type == null ? null : type.toLowerCase();
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public boolean isExpired() {
+        Date now = new Date();
+        return now.getTime() - lastSend.getTime() > 55 * 1000;
     }
 
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public LocalDateTime getConnectionDate() {
-        return connectionDate;
-    }
-
-    public void setConnectionDate(LocalDateTime connectionDate) {
-        this.connectionDate = connectionDate;
-    }
-
-    public String getClientIP() {
-        return clientIP;
-    }
-
-    public void setClientIP(String clientIP) {
-        this.clientIP = clientIP;
-    }
-
-    public boolean isAuthorized() {
-        return authorized;
-    }
-
-    public void setAuthorized(boolean authorized) {
-        this.authorized = authorized;
-    }
-
-    public Object getObj() {
-        return obj;
-    }
-
-    public void setObj(Object obj) {
-        this.obj = obj;
+    public void sendMessage(WebSocketMessage<?> message) throws IOException {
+        lastSend = new Date();
+        session.sendMessage(message);
     }
 }

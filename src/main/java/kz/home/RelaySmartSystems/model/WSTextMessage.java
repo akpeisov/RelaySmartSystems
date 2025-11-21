@@ -2,25 +2,25 @@ package kz.home.RelaySmartSystems.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+@Getter
+@Setter
+@NoArgsConstructor
 public class WSTextMessage {
-    String type;
-    Object payload;
+    private String type;
+    //@JsonBackReference
+    private Object payload;
 
-    public WSTextMessage() {
-    }
+    private static final Logger logger = LoggerFactory.getLogger(WSTextMessage.class);
 
     public WSTextMessage(String type, Object payload) {
         this.type = type;
         this.payload = payload;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public Object getPayload() {
-        return payload;
     }
 
     public String makeMessage() {
@@ -28,6 +28,7 @@ public class WSTextMessage {
         try {
             return mapper.writeValueAsString(this);
         } catch (JsonProcessingException e) {
+            logger.error(e.getLocalizedMessage());
             return null;
         }
     }

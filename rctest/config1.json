@@ -1,0 +1,67 @@
+{
+        "uuid": "6cd4fad0-263d-424a-a1f3-374f74f4fb14",
+        "mac": "12345678",
+        "type": "relayController",
+        "name": "master",
+        "type": "RCV2B",
+        "status": "offline",
+        "ws": "http://localhost:8888/ws",
+        "outputs": [
+            {
+            "id": 1,
+            "name": "out1",
+            "state": "on"
+            }
+        ],
+        "inputs": [
+            {
+                "id": 1,
+                "name": "in1",
+                "state": "on",
+                "events": [
+                    {
+                        "event": "toggle",
+                        "actions": [
+                            {
+                                "output": 1,
+                                "action": "toggle"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 2,
+                "name": "in2",
+                "state": "off",
+                "events": [
+                    {
+                        "event": "on",
+                        "actions": [
+                            {
+                                "output": 1,
+                                "action": "off",
+                                "slaveId": 2
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 16,
+                "name": "btn1",                
+                "events": [
+                    {
+                        "event": "toggle",
+                        "actions": [
+                            {
+                                "output": 1,
+                                "action": "toggle",
+                                "slaveId": 2
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+}

@@ -1,18 +1,23 @@
 package kz.home.RelaySmartSystems.service;
 
-import kz.home.RelaySmartSystems.model.Controller;
-import kz.home.RelaySmartSystems.model.User;
+import kz.home.RelaySmartSystems.model.entity.Controller;
+import kz.home.RelaySmartSystems.model.entity.User;
 import kz.home.RelaySmartSystems.model.def.Info;
 import kz.home.RelaySmartSystems.repository.ControllerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class ControllerService {
     private final ControllerRepository controllerRepository;
-
+    private static final Logger logger = LoggerFactory.getLogger(ControllerService.class);
     public ControllerService(ControllerRepository controllerRepository) {
         this.controllerRepository = controllerRepository;
     }
@@ -25,6 +30,8 @@ public class ControllerService {
 
     public User findControllerOwner(String mac) {
         Controller c = controllerRepository.findByMac(mac.toUpperCase());
+        if (c == null)
+            return null;
         return c.getUser();
     }
 
@@ -77,22 +84,32 @@ public class ControllerService {
         return controllerRepository.findByUser(user);
     }
 
-    public String setControllerInfo(Info info) {
+    public List<Controller> getAllControllers() {
+        return controllerRepository.findAll();
+    }
+
+    public void setControllerInfo(Info info) {
         Controller c = controllerRepository.findByMac(info.getMac().toUpperCase());
         if (c != null) {
-            c.setUptime(info.getUptimeraw());
-            c.setFreeMemory(info.getFreememory());
-            c.setVersion(info.getVersion());
-            c.setEthip(info.getEthip());
-            c.setWifiip(info.getWifiip());
-            c.setName(info.getDevicename());
-            c.setDescription(info.getDescription());
-            c.setWifirssi(info.getRssi());
-            c.setStatus("online");
-            controllerRepository.save(c);
-            return "OK";
+            try {
+                c.setUptime(info.getUptime());
+                c.setUptimeRaw(info.getUptimeRaw());
+                c.setFreeMemory(info.getFreeMemory());
+                c.setVersion(info.getVersion());
+                c.setEthIP(info.getEthIP());
+                c.setWifiIP(info.getWifiIP());
+//                c.setName(info.getName());
+//                c.setDescription(info.getDescription());
+                c.setWifiRSSI(info.getWifiRSSI());
+                c.setModel(info.getModel());
+                c.setResetReason(info.getResetReason());
+                c.setStatus("online");
+                controllerRepository.save(c);
+            }
+            catch (Exception e) {
+                logger.error(e.getLocalizedMessage());
+            }
         }
-        return "NOT_FOUND";
     }
 
     private void setControllerStatus(String mac, String status) {
@@ -112,8 +129,25 @@ public class ControllerService {
     }
 
     public void setOffline() {
-        // проверить контроллеры, которые могли отвалиться и выставить им offline
         controllerRepository.setOffline();
+    }
+
+    public boolean isControllerBelongs(UUID uuid, User user) {
+        Optional<Controller> c = controllerRepository.findById(uuid);
+        return c.map(controller -> controller.getUser().equals(user)).orElse(false);
+    }
+
+    @Transactional
+    public String deleteController(String mac) {
+        Controller c = controllerRepository.findByMac(mac);
+        if (c == null)
+            return "No controller found";
+        try {
+            controllerRepository.delete(c);
+        } catch (Exception e) {
+            return e.getLocalizedMessage();
+        }
+        return "OK";
     }
 
 }

@@ -1,49 +1,14 @@
 package kz.home.RelaySmartSystems.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class TokenData {
     private String username;
     private String mac;
     private String sessionId;
     private String errorText;
     private Exception exception;
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getSessionId() {
-        return sessionId;
-    }
-
-    public void setSessionId(String sessionId) {
-        this.sessionId = sessionId;
-    }
-
-    public String getErrorText() {
-        return errorText;
-    }
-
-    public void setErrorText(String errorText) {
-        this.errorText = errorText;
-    }
-
-    public Exception getException() {
-        return exception;
-    }
-
-    public void setException(Exception exception) {
-        this.exception = exception;
-    }
-
-    public String getMac() {
-        return mac;
-    }
-
-    public void setMac(String mac) {
-        this.mac = mac;
-    }
 }

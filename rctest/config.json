@@ -1,0 +1,215 @@
+{
+    "mac": "N12345678",
+    "ws": "http://localhost:8888/ws",
+    "name": "master",
+    "description": "test",
+    "model": "RCV2B",
+    "io": {
+      "outputs": [
+        {
+          "id": 0,
+          "name": "Out 0s",
+          "slaveId": 3
+        },
+        {
+          "id": 1,
+          "name": "Out 1s",
+          "slaveId": 3
+        },
+        {
+          "id": 1,
+          "name": "out1",
+          "limit": 0,
+          "type": "s",
+          "state": "off",
+          "room": "qweqeq",
+          "slaveId": 0
+        },
+        {
+          "id": 2,
+          "name": "Out 2s",
+          "slaveId": 3
+        },
+        {
+          "id": 2,
+          "name": "out2v1",
+          "limit": 0,
+          "type": "s",
+          "state": "off",
+          "slaveId": 0
+        },
+        {
+          "id": 3,
+          "name": "Out 3s",
+          "slaveId": 4
+        }
+      ],
+      "inputs": [
+        {
+          "id": 2,
+          "name": "in 2n",
+          "type": "SW",
+          "state": "off",
+          "slaveId": 0,
+          "events": [
+            {
+              "event": "on",
+              "actions": [
+                {
+                  "order": 0,
+                  "output": 3,
+                  "action": "on",
+                  "duration": 0,
+                  "slaveId": 3
+                }
+              ],
+              "acls": []
+            },
+            {
+              "event": "off",
+              "actions": [
+                {
+                  "order": 0,
+                  "output": 3,
+                  "action": "off",
+                  "duration": 0,
+                  "slaveId": 3
+                }
+              ],
+              "acls": []
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "name": "btn 0!!",
+          "type": "BTN",
+          "slaveId": 0,
+          "events": [
+            {
+              "event": "toggle",
+              "actions": [
+                {
+                  "order": 0,
+                  "output": 1,
+                  "action": "toggle",
+                  "duration": 0,
+                  "slaveId": 0
+                },
+                {
+                  "order": 1,
+                  "output": 3,
+                  "action": "allOff",
+                  "duration": 0,
+                  "slaveId": 3
+                }
+              ],
+              "acls": []
+            },
+            {
+              "event": "longpress",
+              "actions": [],
+              "acls": []
+            }
+          ]
+        }
+      ]
+    },
+    "modbus": {
+      "mode": "master",
+      "pollingTime": 100,
+      "readTimeout": 500,
+      "maxRetries": 3,
+      "actionOnSameSlave": false,
+      "slaves": [
+        {
+          "slaveId": 3,
+          "model": null
+        }
+      ]
+    },
+    "network": {
+      "ntpServer": "1234",
+      "ntpTZ": "1231",
+      "otaURL": "",
+      "cloud": {
+        "address": "",
+        "enabled": false
+      },
+      "eth": {
+        "enabled": false,
+        "dhcp": false,
+        "ip": null,
+        "netmask": null,
+        "gateway": null,
+        "dns": null,
+        "enableReset": false,
+        "resetGPIO": null
+      },
+      "wifi": {
+        "enabled": true,
+        "dhcp": true,
+        "ip": null,
+        "netmask": null,
+        "gateway": null,
+        "dns": null,
+        "ssid": "qwerty",
+        "pass": "1231231"
+      },
+      "ftp": {
+        "enabled": false,
+        "user": "",
+        "pass": ""
+      }
+    },
+    "scheduler": {
+      "enabled": true,
+      "tasks": [
+        {
+          "name": "Task 1",
+          "grace": 10,
+          "time": 1000,
+          "done": false,
+          "enabled": true,
+          "dow": [
+            5
+          ],
+          "actions": [
+            {
+              "action": "on",
+              "type": "input",
+              "input": 0
+            },
+            {
+              "action": "",
+              "output": 0,
+              "type": "output"
+            }
+          ]
+        },
+        {
+          "name": "task 2",
+          "grace": 0,
+          "time": 820,
+          "done": true,
+          "enabled": true,
+          "dow": [
+            0,
+            1,
+            3,
+            4
+          ],
+          "actions": [
+            {
+              "action": "tgl",
+              "output": 0,
+              "type": "input",
+              "input": 1
+            }
+          ]
+        }
+      ]
+    },
+    "mqtt": null,
+    "username": "user"
+  }

@@ -1,113 +1,24 @@
 package kz.home.RelaySmartSystems.model.def;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Info {
-    private Integer freememory;
+    private Integer freeMemory;
     private String uptime;
-    private Integer uptimeraw;
+    private Integer uptimeRaw;
     private String curdate;
-    private String devicename;
+    private String name;
     private String description;
     private String version;
-    private Integer rssi;
-    private String ethip;
-    private String wifiip;
+    private Integer wifiRSSI;
+    private String ethIP;
+    private String wifiIP;
     private String mac;
-
-
-    public Integer getFreememory() {
-        return freememory;
-    }
-
-    public void setFreememory(Integer freememory) {
-        this.freememory = freememory;
-    }
-
-    public String getUptime() {
-        return uptime;
-    }
-
-    public void setUptime(String uptime) {
-        this.uptime = uptime;
-    }
-
-    public Integer getUptimeraw() {
-        return uptimeraw;
-    }
-
-    public void setUptimeraw(Integer uptimeraw) {
-        this.uptimeraw = uptimeraw;
-    }
-
-    public String getCurdate() {
-        return curdate;
-    }
-
-    public void setCurdate(String curdate) {
-        this.curdate = curdate;
-    }
-
-    public String getDevicename() {
-        return devicename;
-    }
-
-    public void setDevicename(String devicename) {
-        this.devicename = devicename;
-    }
-
-    public String getVersion() {
-        return version;
-    }
-
-    public void setVersion(String version) {
-        this.version = version;
-    }
-
-    public Integer getRssi() {
-        return rssi;
-    }
-
-    public void setRssi(Integer rssi) {
-        this.rssi = rssi;
-    }
-
-    public String getEthip() {
-        return ethip;
-    }
-
-    public void setEthip(String ethip) {
-        this.ethip = ethip;
-    }
-
-    public String getWifiip() {
-        return wifiip;
-    }
-
-    public void setWifiip(String wifiip) {
-        this.wifiip = wifiip;
-    }
-
-    public String getMac() {
-        return mac;
-    }
-
-    public void setMac(String mac) {
-        this.mac = mac;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getJson() throws JsonProcessingException {
-        ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-        return ow.writeValueAsString(this);
-    }
+    private String model;
+    private String resetReason;
 }

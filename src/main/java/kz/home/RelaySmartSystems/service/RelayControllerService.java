@@ -2,23 +2,21 @@ package kz.home.RelaySmartSystems.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kz.home.RelaySmartSystems.model.User;
-import kz.home.RelaySmartSystems.model.relaycontroller.*;
+import kz.home.RelaySmartSystems.model.entity.*;
+import kz.home.RelaySmartSystems.model.dto.*;
+import kz.home.RelaySmartSystems.model.mapper.*;
+import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
 import kz.home.RelaySmartSystems.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
-import java.time.Instant;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import org.apache.commons.beanutils.BeanUtils;
 
 import kz.home.RelaySmartSystems.Utils;
+
+import javax.transaction.Transactional;
 
 @Service
 public class RelayControllerService {
@@ -28,155 +26,95 @@ public class RelayControllerService {
     private final RCEventRepository rcEventRepository;
     private final RCActionRepository rcActionRepository;
     private final RCAclRepository rcAclRepository;
+    private final RCModbusConfigRepository rcModbusConfigRepository;
+    private final RelayControllerMapper relayControllerMapper;
+    private final NetworkConfigMapper networkConfigMapper;
+    private final NetworkConfigRepository networkConfigRepository;
+    private final RCConfigMapper rcConfigMapper;
+    private final RCSchedulerMapper rcSchedulerMapper;
+    private final RCSchedulerRepository rcSchedulerRepository;
+    private final RCMqttMapper rcMqttMapper;
+    private final RCMqttRepository rcMqttRepository;
     private static final Logger logger = LoggerFactory.getLogger(RelayControllerService.class);
+
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
                                   RCOutputRepository outputRepository,
                                   RCInputRepository inputRepository,
                                   RCEventRepository rcEventRepository,
                                   RCActionRepository rcActionRepository,
-                                  RCAclRepository rcAclRepository) {
+                                  RCAclRepository rcAclRepository,
+                                  RCModbusConfigRepository rcModbusConfigRepository,
+                                  ControllerService controllerService,
+                                  RelayControllerMapper relayControllerMapper,
+                                  NetworkConfigMapper networkConfigMapper,
+                                  NetworkConfigRepository networkConfigRepository,
+                                  RCConfigMapper rcConfigMapper,
+                                  RCSchedulerMapper rcSchedulerMapper,
+                                  RCSchedulerRepository rcSchedulerRepository,
+                                  RCMqttMapper rcMqttMapper,
+                                  RCMqttRepository rcMqttRepository) {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
         this.inputRepository = inputRepository;
         this.rcEventRepository = rcEventRepository;
         this.rcActionRepository = rcActionRepository;
         this.rcAclRepository = rcAclRepository;
+        this.rcModbusConfigRepository = rcModbusConfigRepository;
+        this.relayControllerMapper = relayControllerMapper;
+        this.networkConfigMapper = networkConfigMapper;
+        this.networkConfigRepository = networkConfigRepository;
+        this.rcConfigMapper = rcConfigMapper;
+        this.rcSchedulerMapper = rcSchedulerMapper;
+        this.rcSchedulerRepository = rcSchedulerRepository;
+        this.rcMqttMapper = rcMqttMapper;
+        this.rcMqttRepository = rcMqttRepository;
     }
 
-    public RelayController addRelayController(RelayController relayController, User user) {
-        RelayController newRelayController = new RelayController();
-        try {
-            // найти существующий контроллер
-            String mac = relayController.getMac();
-            RelayController existingRelayController = relayControllerRepository.findByMac(mac);
-            if (existingRelayController != null) {
-                // нашли существующий. удаляем к чертям со всеми дочерними объектами
-                relayControllerRepository.delete(existingRelayController);
-            }
-
-            // Создаем новый
-            newRelayController.setMac(relayController.getMac());
-//            newRelayController.setName(relayController.getName());
-            newRelayController.setUser(user);
-            newRelayController.setType("relayController");
-            newRelayController.setStatus("online");
-            newRelayController.setConfigTime(Instant.now().toEpochMilli() / 1000);
-
-            // outputs
-            Set<RCOutput> newOutputs = new HashSet<>();
-            for (RCOutput output : relayController.getOutputs()) {
-                RCOutput newOutput = new RCOutput();
-                BeanUtils.copyProperties(newOutput, output);
-                newOutput.setRelayController(newRelayController);
-                newOutputs.add(newOutput);
-            }
-            newRelayController.setOutputs(newOutputs);
-
-            // inputs
-            Set<RCInput> newInputs = new HashSet<>();
-            for (RCInput input : relayController.getInputs()) {
-                RCInput newInput = new RCInput();
-                BeanUtils.copyProperties(newInput, input);
-                newInput.setRelayController(newRelayController);
-                // events
-                if (input.getEvents() != null) {
-                    Set<RCEvent> newEvents = new HashSet<>();
-                    for (RCEvent event : input.getEvents()) {
-                        RCEvent newEvent = new RCEvent();
-                        BeanUtils.copyProperties(newEvent, event);
-                        newEvent.setInput(newInput);
-                        if (event.getActions() != null) {
-                            Set<RCAction> newActions = new HashSet<>();
-                            for (RCAction action : event.getActions()) {
-                                RCAction newAction = new RCAction();
-                                BeanUtils.copyProperties(newAction, action);
-                                newAction.setEvent(newEvent);
-                                newActions.add(newAction);
-                            }
-                            newEvent.setActions(newActions);
-                        }
-                        // acls
-                        if (event.getAcls() != null) {
-                            Set<RCAcl> newAcls = new HashSet<>();
-                            for (RCAcl acl : event.getAcls()) {
-                                RCAcl newAcl = new RCAcl();
-                                BeanUtils.copyProperties(newAcl, acl);
-                                newAcl.setEvent(newEvent);
-                                newAcls.add(newAcl);
-                            }
-                            newEvent.setAcls(newAcls);
-                        }
-                        newEvents.add(newEvent);
-                    }
-                    newInput.setEvents(newEvents);
-                }
-                newInputs.add(newInput);
-            }
-            newRelayController.setInputs(newInputs);
-
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
-        return relayControllerRepository.save(newRelayController);
-    }
-
-    public void updateRelayControllerIOStates(RelayController relayController) {
-//        RelayController newRelayController = new RelayController();
-        // найти существующий контроллер
-        String mac = relayController.getMac();
-        RelayController existingRelayController = relayControllerRepository.findByMac(mac);
-        if (existingRelayController == null) {
+    @Transactional
+    public void updateRelayControllerIOStates(RCUpdateIODTO rcUpdateIODTO) {
+        RelayController relayController = relayControllerRepository.findByMac(rcUpdateIODTO.getMac());
+        if (relayController == null) {
             // контролер не найден
-            logger.error(String.format("Relay controller with mac %s not found", mac));
+            logger.error("Relay controller with mac {} not found", rcUpdateIODTO.getMac());
             return;
         }
 
-        // outputs
-        for (RCOutput output : relayController.getOutputs()) {
-            RCOutput o = outputRepository.findOutput(existingRelayController.getUuid(), output.getId(), output.getSlaveId());
-            if (o != null) {
-                o.setState(output.getState());
-                outputRepository.save(o);
-            }
+        for (RCUpdateIODTO.RCState out : rcUpdateIODTO.getOutputs()) {
+            relayController.getOutputs().stream()
+                    .filter(child -> child.getId().equals(out.getId()))
+                    .filter(child -> child.getSlaveId().equals(out.getSlaveId()))
+                    .findFirst()
+                    .ifPresent(child -> {
+                        child.setState(out.getState());
+                    });
         }
-
-        // inputs
-        for (RCInput input : relayController.getInputs()) {
-            RCInput i = inputRepository.findInput(existingRelayController.getUuid(), input.getId());
-            if (i != null) {
-                i.setState(input.getState());
-                inputRepository.save(i);
-            }
+        for (RCUpdateIODTO.RCState in : rcUpdateIODTO.getInputs()) {
+            relayController.getInputs().stream()
+                    .filter(child -> child.getId().equals(in.getId()))
+                    .filter(child -> child.getSlaveId().equals(in.getSlaveId()))
+                    .findFirst()
+                    .ifPresent(child -> {
+                        child.setState(in.getState());
+                    });
         }
+        relayControllerRepository.save(relayController);
     }
 
     public void setOutputState(String mac, Integer output, String state, Integer slaveId) {
-        //logger.info(String.format("setOutputState mac %s output %d state %s slaveid %d", mac, output, state, slaveId));
         RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
         if (c != null) {
             RCOutput o = outputRepository.findOutput(c.getUuid(), output, slaveId);
             if (o != null) {
                 o.setState(state);
-            } else {
-                // create new output
-                o = new RCOutput();
-                o.setName(String.format("Out %d", output));
-                o.setState(state);
-                o.setRelayController(c);
-                o.setSlaveId(slaveId);
-                o.setId(output);
-                o.setLimit(0L);
-                o.setTimer(0L);
+                outputRepository.save(o);
             }
-            outputRepository.save(o);
-        } else {
-            logger.error(String.format("setOutputState. RelayController with mac %s not found", mac));
         }
     }
-    public void setInputState(String mac, Integer input, String state) {
+
+    public void setInputState(String mac, Integer input, String state, Integer slaveId) {
         RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
         if (c != null) {
-            RCInput o = inputRepository.findInput(c.getUuid(), input);
+            RCInput o = inputRepository.findInput(c.getUuid(), input, slaveId);
             if (o != null) {
                 o.setState(state);
                 inputRepository.save(o);
@@ -184,24 +122,355 @@ public class RelayControllerService {
         }
     }
 
+    @Transactional
+    public String saveConfig(RCConfigDTO rcConfigDTO) {
+        RelayController relayController = relayControllerRepository.findByMac(rcConfigDTO.getMac());
+        if (relayController != null) {
+            relayController.setName(rcConfigDTO.getName());
+            relayController.setDescription(rcConfigDTO.getDescription());
+            relayController.setHwParams(rcConfigDTO.getHwParams());
+        } else {
+            return "NOT_FOUND";
+        }
+        String res = saveMBConfig(rcConfigDTO.getModbus(), rcConfigDTO.getMac());
+        if (!"OK".equals(res))
+            return res;
+        res = saveNetworkConfig(rcConfigDTO.getNetwork(), relayController);
+        if (!"OK".equals(res))
+            return res;
+        res = saveSchedulerConfig(rcConfigDTO.getScheduler(), relayController);
+//        saveMqttConfig(rcConfigDTO.getMqtt(), relayController);
+        return res;
+    }
+
+    private void saveMqttConfig(RCMqttDTO rcMqttDTO,
+                                RelayController relayController) {
+        if (rcMqttDTO == null)
+            return;
+        RCMqtt rcMqtt = rcMqttMapper.toEntity(rcMqttDTO);
+        rcMqtt.setController(relayController);
+        rcMqttRepository.save(rcMqtt);
+    }
+
+    String saveSchedulerConfig(RCSchedulerDTO rcSchedulerDTO,
+                               RelayController relayController) {
+        if (rcSchedulerDTO == null || relayController == null)
+            return "NULL";
+        try {
+            RCScheduler existingScheduler = rcSchedulerRepository.findByController(relayController);
+            if (existingScheduler != null) {
+                // update existing
+                existingScheduler.setEnabled(rcSchedulerDTO.isEnabled());
+
+                // --- синхронизация задач ---
+                List<RCTask> existingTasks = existingScheduler.getTasks();
+                List<RCSchedulerDTO.RCTaskDTO> dtoTasks = rcSchedulerDTO.getTasks() != null ? rcSchedulerDTO.getTasks() : new ArrayList<>();
+
+                // Удаляем задачи, которых нет в DTO (по имени)
+                existingTasks.removeIf(task -> dtoTasks.stream().noneMatch(dto -> dto.getName() != null && dto.getName().equals(task.getName())));
+
+                // Обновляем существующие и добавляем новые задачи
+                for (RCSchedulerDTO.RCTaskDTO dtoTask : dtoTasks) {
+                    RCTask task = existingTasks.stream()
+                        .filter(t -> dtoTask.getName() != null && dtoTask.getName().equals(t.getName()))
+                        .findFirst()
+                        .orElse(null);
+                    if (task == null) {
+                        // новая задача
+                        task = new RCTask();
+                        task.setScheduler(existingScheduler);
+                        existingTasks.add(task);
+                    }
+                    // обновляем поля задачи
+                    task.setName(dtoTask.getName());
+                    task.setGrace(dtoTask.getGrace());
+                    task.setTime(dtoTask.getTime());
+                    task.setDone(dtoTask.isDone());
+                    task.setEnabled(dtoTask.isEnabled());
+                    task.setDow(dtoTask.getDow());
+
+                    // --- синхронизация действий задачи ---
+                    List<RCTaskAction> existingActions = task.getActions();
+                    List<RCSchedulerDTO.RCTaskActionDTO> dtoActions = dtoTask.getActions() != null ? dtoTask.getActions() : new ArrayList<>();
+                    // Удаляем действия, которых нет в DTO (по action и output)
+                    existingActions.removeIf(act -> dtoActions.stream().noneMatch(dto -> Objects.equals(dto.getAction(), act.getAction()) && Objects.equals(dto.getOutput(), act.getOutput())));
+                    // Обновляем существующие и добавляем новые действия
+                    for (RCSchedulerDTO.RCTaskActionDTO dtoAction : dtoActions) {
+                        RCTaskAction action = existingActions.stream()
+                            .filter(a -> Objects.equals(dtoAction.getAction(), a.getAction()) && Objects.equals(dtoAction.getOutput(), a.getOutput()))
+                            .findFirst()
+                            .orElse(null);
+                        if (action == null) {
+                            action = new RCTaskAction();
+                            action.setTask(task);
+                            existingActions.add(action);
+                        }
+                        action.setAction(dtoAction.getAction());
+                        action.setOutput(dtoAction.getOutput());
+                        action.setType(dtoAction.getType());
+                        action.setInput(dtoAction.getInput());
+                    }
+                }
+                rcSchedulerRepository.save(existingScheduler);
+                return "OK";
+            }
+
+            // если нет существующего планировщика, создаём новый
+            RCScheduler rcScheduler = rcSchedulerMapper.toEntity(rcSchedulerDTO);
+            rcScheduler.setController(relayController);
+            rcSchedulerRepository.save(rcScheduler);
+        } catch (Exception e) {
+            logger.error("Error while saving scheduler config", e);
+            return e.getLocalizedMessage();
+        }
+        return "OK";
+    }
+
+    private String saveNetworkConfig(NetworkConfigDTO networkConfigDTO,
+                                   RelayController relayController) {
+        if (relayController == null || networkConfigDTO == null) {
+            return "EMPTY";
+        }
+        NetworkConfig existingConfig = networkConfigRepository.findByController(relayController);
+        /*
+        NetworkConfig existingConfig = networkConfigRepository.findAll().stream()
+            .filter(cfg -> cfg.getController() != null && cfg.getController().getUuid().equals(relayController.getUuid()))
+            .findFirst().orElse(null);*/
+
+        if (existingConfig != null) {
+            // Обновляем поля
+            existingConfig.setNtpServer(networkConfigDTO.getNtpServer());
+            existingConfig.setNtpTZ(networkConfigDTO.getNtpTZ());
+            existingConfig.setOtaURL(networkConfigDTO.getOtaURL());
+
+            // Обновляем вложенные сущности
+            if (networkConfigDTO.getCloud() != null) {
+                if (existingConfig.getCloud() == null) {
+                    CloudConfig config = new CloudConfig();
+                    networkConfigMapper.cloudFromDto(config, networkConfigDTO.getCloud());
+                    existingConfig.setCloud(config);
+                } else {
+                    networkConfigMapper.cloudFromDto(existingConfig.getCloud(), networkConfigDTO.getCloud());
+                }
+            } else {
+                existingConfig.setCloud(null);
+            }
+            if (networkConfigDTO.getEth() != null) {
+                if (existingConfig.getEth() == null) {
+                    EthConfig ethConfig = new EthConfig();
+                    networkConfigMapper.ethFromDto(ethConfig, networkConfigDTO.getEth());
+                    existingConfig.setEth(ethConfig);
+                } else {
+                    networkConfigMapper.ethFromDto(existingConfig.getEth(), networkConfigDTO.getEth());
+                }
+            } else {
+                existingConfig.setEth(null);
+            }
+            if (networkConfigDTO.getWifi() != null) {
+                if (existingConfig.getWifi() == null) {
+                    WifiConfig wifiConfig = new WifiConfig();
+                    networkConfigMapper.wifiFromDto(wifiConfig, networkConfigDTO.getWifi());
+                    existingConfig.setWifi(wifiConfig);
+                } else {
+                    networkConfigMapper.wifiFromDto(existingConfig.getWifi(), networkConfigDTO.getWifi());
+                }
+            } else {
+                existingConfig.setWifi(null);
+            }
+            if (networkConfigDTO.getFtp() != null) {
+                if (existingConfig.getFtp() == null) {
+                    FtpConfig ftpConfig = new FtpConfig();
+                    networkConfigMapper.ftpFromDto(ftpConfig, networkConfigDTO.getFtp());
+                    existingConfig.setFtp(ftpConfig);
+                } else {
+                    networkConfigMapper.ftpFromDto(existingConfig.getFtp(), networkConfigDTO.getFtp());
+                }
+            } else {
+                existingConfig.setFtp(null);
+            }
+            networkConfigRepository.save(existingConfig);
+        } else {
+            NetworkConfig networkConfig = networkConfigMapper.fromDto(networkConfigDTO);
+            networkConfig.setController(relayController);
+            networkConfigRepository.save(networkConfig);
+        }
+        return "OK";
+    }
+
+    private List<RCOutput> getNewMBOutputs(List<RCOutput> outputs, RelayController relayController, Integer slaveId) {
+        List<RCOutput> rcOutputs = new ArrayList<>();
+        for (RCOutput rcOutputSlave : outputs) {
+            if (relayController.getOutputs().stream()
+                    .anyMatch(rcOutput -> rcOutput.getId().equals(rcOutputSlave.getId()) &&
+                            rcOutput.getSlaveId().equals(slaveId))) {
+                // skip existing outputs
+                continue;
+            }
+            RCOutput rcOutput = new RCOutput();
+            rcOutput.setRelayController(relayController);
+            rcOutput.setSlaveId(slaveId);
+            rcOutput.setId(rcOutputSlave.getId());
+            rcOutput.setName(rcOutputSlave.getName());
+            rcOutput.setType(rcOutputSlave.getType());
+            rcOutputs.add(rcOutput);
+        }
+        return rcOutputs;
+    }
+
+    private List<RCInput> getNewMBInputs(List<RCInput> inputs, RelayController relayController, Integer slaveId) {
+        List<RCInput> rcInputs = new ArrayList<>();
+        for (RCInput rcInputSlave : inputs) {
+            if (rcInputSlave.getId() > 15)
+                continue;
+            if (relayController.getInputs().stream()
+                    .anyMatch(rcInput -> rcInput.getId().equals(rcInputSlave.getId()) &&
+                            rcInput.getSlaveId().equals(slaveId))) {
+                // skip existing inputs
+                continue;
+            }
+            RCInput rcInput = new RCInput();
+            rcInput.setRelayController(relayController);
+            rcInput.setSlaveId(slaveId);
+            rcInput.setId(rcInputSlave.getId());
+            rcInput.setName(rcInputSlave.getName());
+            rcInput.setType(rcInputSlave.getType());
+            rcInputs.add(rcInput);
+        }
+        return rcInputs;
+        // TODO : хорошо бы сохранить локальные правила на слейвах
+    }
+
+    private String saveMBConfig(RCModbusConfigDTO rcModbusConfigDTO,
+                                /*RelayController relayController*/ String mac) {
+        if (rcModbusConfigDTO == null)
+            return "EMPTY";
+
+        RelayController relayController = relayControllerRepository.findByMac(mac);
+        if (relayController == null) {
+            return "Relay controller not found";
+        }
+
+        UUID rcModbusConfigUUID;
+        RCModbusConfig config = rcModbusConfigRepository.findByController(relayController);
+        if (config != null) {
+            rcModbusConfigUUID = config.getUuid();
+        } else {
+            rcModbusConfigUUID = null;
+        }
+
+        // для слейва надо проверить есть ли другой слейв с таким же slaveId
+        if ("slave".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
+            if (rcModbusConfigRepository.findByMaster(rcModbusConfigDTO.getMaster()).stream()
+                    .filter(mb -> !mb.getUuid().equals(rcModbusConfigUUID))
+                    .anyMatch(mb -> mb.getSlaveId().equals(rcModbusConfigDTO.getSlaveId()))) {
+                return "Another slave with same slaveId already exists";
+            }
+        }
+        RCModbusConfig rcModbusConfig = RelayControllerMapper.mbConfigToEntity(rcModbusConfigDTO);
+        rcModbusConfig.setUuid(rcModbusConfigUUID);
+        rcModbusConfig.setController(relayController);
+        rcModbusConfigRepository.save(rcModbusConfig);
+
+        if ("master".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
+            // find all slaves and add their io to master
+            List<Integer> slaveIds = new ArrayList<>();
+            for (RCModbusConfig modbusConfig : rcModbusConfigRepository.findByMaster(relayController.getMac())) {
+                slaveIds.add(modbusConfig.getSlaveId());
+                // add outputs and inputs
+                List<RCOutput> rcOutputs = getNewMBOutputs(modbusConfig.getController().getOutputs(), relayController, modbusConfig.getSlaveId());
+                List<RCOutput> existedOutputs = relayController.getOutputs();
+                existedOutputs.addAll(rcOutputs);
+                relayController.setOutputs(existedOutputs);
+
+                List<RCInput> rcInputs = getNewMBInputs(modbusConfig.getController().getInputs(), relayController, modbusConfig.getSlaveId());
+                List<RCInput> existedInputs = relayController.getInputs();
+                existedInputs.addAll(rcInputs);
+                relayController.setInputs(existedInputs);
+            }
+
+            // remove all io not in slaveIds
+            // A collection with cascade="all-delete-orphan" was no longer referenced by the owning entity instance
+            relayController.getInputs()
+                    .removeIf(input -> input.getSlaveId() > 0 && !slaveIds.contains(input.getSlaveId()));
+            relayController.getOutputs()
+                    .removeIf(output -> output.getSlaveId() > 0 && !slaveIds.contains(output.getSlaveId()));
+
+            relayControllerRepository.save(relayController);
+        } else {
+            if ("slave".equalsIgnoreCase(rcModbusConfigDTO.getMode())) {
+                // TODO : если slaveId поменять то будет жопа, надо исправить, т.к. существующие io у мастера останутся и добавятся новые
+                // find master
+                RelayController master = relayControllerRepository.findByMac(rcModbusConfig.getMaster());
+                if (master == null) {
+                    logger.error("Master controller with mac {} not found", rcModbusConfig.getMaster());
+                    return "Master controller not found";
+                }
+                List<RCOutput> rcOutputs = getNewMBOutputs(relayController.getOutputs(), master, rcModbusConfig.getSlaveId());
+                List<RCOutput> existedOutputs = master.getOutputs();
+                existedOutputs.addAll(rcOutputs);
+                master.setOutputs(existedOutputs);
+
+                List<RCInput> rcInputs = getNewMBInputs(relayController.getInputs(), master, rcModbusConfig.getSlaveId());
+                List<RCInput> existedInputs = master.getInputs();
+                existedInputs.addAll(rcInputs);
+                master.setInputs(existedInputs);
+                relayControllerRepository.save(master);
+            }
+            // у слейвов или без modbus не может быть дочерних IO
+            relayController.getInputs().removeIf(input -> input.getSlaveId() > 0);
+            relayController.getOutputs().removeIf(output -> output.getSlaveId() > 0);
+            relayControllerRepository.save(relayController);
+        }
+        return "OK";
+    }
+
+    @Transactional
+    public String saveNewRelayController(RCConfigDTO rcConfigDTO) throws InvocationTargetException, IllegalAccessException {
+        // only for new RC
+        // find existing RC
+        String mac = rcConfigDTO.getMac();
+        String res = "OK";
+        if (mac == null) {
+            res = "Mac is null";
+            logger.error(res);
+            return res;
+        }
+        RelayController existingRelayController = relayControllerRepository.findByMac(mac);
+        if (existingRelayController != null) {
+            // rc found. delete it
+            logger.info("found existed relayController. deleting it");
+            relayControllerRepository.delete(existingRelayController);
+        }
+
+        RelayController relayController = relayControllerMapper.toEntity(rcConfigDTO); //rcConfigMapper.toEntityRC(rcConfigDTO);
+        relayControllerRepository.save(relayController);
+
+        // save config
+        res = saveConfig(rcConfigDTO);
+        return res;
+    }
+
+    @Transactional
     public String makeDeviceConfig(String mac) {
         // формирование конфигурации устройства для отправки на устройство
         String json = "{}";
-        RelayController c = relayControllerRepository.findByMac(mac.toUpperCase());
-        if (c != null) {
-            Map<String, Object> objectMap = new HashMap<>();
-            objectMap.put("type", "SETDEVICECONFIG");
-            objectMap.put("payload", c);
+        try {
+            RelayController controller = relayControllerRepository.findByMac(mac.toUpperCase());
+            if (controller != null) {
+                RCConfigDTO relayControllerDTO = rcConfigMapper.RCtoDto(controller);
+                relayControllerDTO.setCrc(Utils.getCRC(Utils.getJson(relayControllerDTO)));
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            try {
-                json = objectMapper.writeValueAsString(objectMap);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+                Map<String, Object> objectMap = new HashMap<>();
+
+                objectMap.put("type", "SETDEVICECONFIG");
+                objectMap.put("payload", relayControllerDTO);
+
+                json = Utils.getJson(objectMap);
+                json = Utils.removeFieldsJSON(json, "crc", "outputUuid", "uuid", "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
             }
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage());
         }
-
-        json = Utils.removeFieldsJSON(json, "uuid", "alice", "timer", "outputID", "mac", "firstDate", "linkDate", "status", "uptime", "freeMemory", "version", "linked", "lastSeen", "wifirssi");
         return json;
     }
 
@@ -213,172 +482,86 @@ public class RelayControllerService {
         return null;
     }
 
-    public void updateOutput(RCUpdateOutput rcUpdateOutput) {
-        RelayController controller = relayControllerRepository.findByMac(rcUpdateOutput.getMac());
-        if (controller != null) {
-            RCOutput rcOutput = outputRepository.findOutput(controller.getUuid(), rcUpdateOutput.getId(), rcUpdateOutput.getSlaveId());
-            if (rcUpdateOutput.getName() != null)
-                rcOutput.setName(rcUpdateOutput.getName());
-            if (rcUpdateOutput.getAlice() != null)
-                rcOutput.setAlice(rcUpdateOutput.getAlice());
-            if (rcUpdateOutput.getTimer() != null)
-                rcOutput.setTimer(rcUpdateOutput.getTimer());
-            if (rcUpdateOutput.getOff() != null)
-                rcOutput.setOff(rcUpdateOutput.getOff());
-            if (rcUpdateOutput.getOn() != null)
-                rcOutput.setOn(rcUpdateOutput.getOn());
-            if (rcUpdateOutput.getType() != null)
-                rcOutput.setType(rcUpdateOutput.getType());
-            if (rcUpdateOutput.get_default() != null)
-                rcOutput.set_default(rcUpdateOutput.get_default());
+    @Transactional
+    public String updateOutput(RCOutputDTO rcOutputDTO) {
+        // обновление сущности выхода с фронта
+        Optional<RCOutput> rcOutputOpt = outputRepository.findById(rcOutputDTO.getUuid());
+
+        if (rcOutputOpt.isPresent()) {
+            RCOutput rcOutput = rcOutputOpt.get();
+            rcOutput.setName(rcOutputDTO.getName());
+            rcOutput.setAlice(rcOutputDTO.getAlice());
+            rcOutput.setRoom(rcOutputDTO.getRoom());
+            rcOutput.setTimer(rcOutputDTO.getTimer());
+            rcOutput.setOff(rcOutputDTO.getOff());
+            rcOutput.setOn(rcOutputDTO.getOn());
+            rcOutput.setType(rcOutputDTO.getType());
+            rcOutput.setLimit(rcOutputDTO.getLimit());
+            rcOutput.set_default(rcOutputDTO.get_default());
             outputRepository.save(rcOutput);
+            return "OK";
+        } else {
+            return "Output not found";
         }
     }
 
-    public String updateInput(RCUpdateInput rcUpdateInput) {
+    @Transactional
+    public String updateInput(RCInputDTO rcInputDTO) {
         String result = "OK";
-
-        Optional<RCInput> rcInputOpt = inputRepository.findById(rcUpdateInput.getUuid());
+        Optional<RCInput> rcInputOpt = inputRepository.findById(rcInputDTO.getUuid());
         try {
             if (rcInputOpt.isPresent()) {
                 RCInput rcInput = rcInputOpt.get();
-                if (rcUpdateInput.getName() != null)
-                    rcInput.setName(rcUpdateInput.getName());
-                if (rcUpdateInput.getType() != null)
-                    rcInput.setType(rcUpdateInput.getType());
+                rcInput.setName(rcInputDTO.getName());
+                rcInput.setType(rcInputDTO.getType());
+                rcInput.setSlaveId(rcInputDTO.getSlaveId());
 
-                // Обработка событий
-                Set<RCEvent> existingEvents = rcInput.getEvents();
-                Set<RCEvent> eventsToUpdate = new HashSet<>();
+                if (!rcInput.getCRC().equals(rcInputDTO.getCRC())) {
+                    // events changed
+                    rcInput.getEvents().clear();
+                    inputRepository.flush();
 
-                // идем по событиям из запроса
-                for (RCEvent eventRequest : rcUpdateInput.getEvents()) {
-                    Optional<RCEvent> existingEvent = existingEvents.stream()
-                            .filter(event -> event.getEvent().equals(eventRequest.getEvent()))
-                            .findFirst();
+                    if (rcInputDTO.getEvents() != null) {
+                        for (RCEventDTO eventDto : rcInputDTO.getEvents()) {
+                            RCEvent event = new RCEvent();
+                            event.setEvent(eventDto.getEvent());
+                            event.setInput(rcInput);
 
-                    RCEvent newEvent = existingEvent.orElseGet(RCEvent::new);
-                    newEvent.setInput(rcInput);
-                    if (existingEvent.isEmpty()) {
-                        // новое событие (ранее не было), значит ВСЕ дочерние элементы нужно просто добавить
-                        newEvent.setEvent(eventRequest.getEvent());
-                        Set<RCAction> actionsToInsert = new HashSet<>();
-                        for (RCAction actionRequest : eventRequest.getActions()) {
-                            // fix
-                            if (((actionRequest.getOutput() == null) || (actionRequest.getSlaveId() == null)) &&
-                                (actionRequest.getOutputID() != null)) {
-                                String outputID = actionRequest.getOutputID();
-                                Pattern pattern = Pattern.compile("s(\\d+)o(\\d+)");
-                                Matcher matcher = pattern.matcher(outputID);
-                                if (matcher.matches()) {
-                                    actionRequest.setSlaveId(Integer.parseInt(matcher.group(1)));
-                                    actionRequest.setOutput(Integer.parseInt(matcher.group(2)));
+                            // actions
+                            if (eventDto.getActions() != null) {
+                                List<RCAction> actions = new ArrayList<>();
+                                for (RCActionDTO actionDto : eventDto.getActions()) {
+                                    RCAction action = getActionFromDto(actionDto);
+                                    // TODO : пока временный костыль
+//                                    Optional<RCOutput> rcOutput = outputRepository.findById(actionDto.getOutputUuid());
+//                                    if (rcOutput.isPresent()) {
+//                                        action.setOutput(rcOutput.get().getId());
+//                                        action.setSlaveId(rcOutput.get().getSlaveId());
+//                                    }
+                                    action.setEvent(event);
+                                    actions.add(action);
                                 }
+                                event.setActions(actions);
                             }
-                            RCAction newAction = new RCAction();
-                            newAction.setAction(actionRequest.getAction());
-                            newAction.setSlaveId(actionRequest.getSlaveId());
-                            newAction.setOutput(actionRequest.getOutput());
-                            newAction.setDuration(actionRequest.getDuration());
-                            newAction.setOrder(actionRequest.getOrder());
-                            newAction.setEvent(newEvent);
-                            actionsToInsert.add(newAction);
-                        }
-                        if (eventRequest.getAcls() != null) {
-                            Set<RCAcl> aclsToInsert = new HashSet<>();
-                            for (RCAcl aclRequest : eventRequest.getAcls()) {
-                                RCAcl newAcl = new RCAcl();
-                                newAcl.setId(aclRequest.getId());
-                                newAcl.setIo(aclRequest.getIo());
-                                newAcl.setState(aclRequest.getState());
-                                newAcl.setType(aclRequest.getType());
-                                newAcl.setEvent(newEvent);
-                                aclsToInsert.add(newAcl);
-                            }
-                            newEvent.setAcls(aclsToInsert);
-                        }
-                        newEvent.setActions(actionsToInsert);
-
-
-                    } else {
-                        // существующее событие, придется сравнивать экшены и асл
-                        // сравниваем экшены. Сначала добавляем новые экшены
-                        Set<RCAction> existingActions = existingEvent.get().getActions();
-                        Set<RCAction> actionsToUpdate = new HashSet<>();
-                        for (RCAction actionRequest : eventRequest.getActions()) {
-                            Optional<RCAction> existingAction = existingActions.stream()
-                                    .filter(action -> action.getOrder().equals(actionRequest.getOrder()))
-                                    .findFirst();
-                            // Может быть найдено действие, а может и нет
-                            // если нет то просто добавляем, если есть обновляем
-                            if (((actionRequest.getOutput() == null) || (actionRequest.getSlaveId() == null)) &&
-                                    (actionRequest.getOutputID() != null)) {
-                                String outputID = actionRequest.getOutputID();
-                                Pattern pattern = Pattern.compile("s(\\d+)o(\\d+)");
-                                Matcher matcher = pattern.matcher(outputID);
-                                if (matcher.matches()) {
-                                    actionRequest.setSlaveId(Integer.parseInt(matcher.group(1)));
-                                    actionRequest.setOutput(Integer.parseInt(matcher.group(2)));
+                            // acls
+                            if (eventDto.getAcls() != null) {
+                                List<RCAcl> acls = new ArrayList<>();
+                                for (RCAclDTO aclDto : eventDto.getAcls()) {
+                                    RCAcl acl = getAclFromDto(aclDto);
+                                    acl.setEvent(event);
+                                    acls.add(acl);
                                 }
+                                event.setAcls(acls);
                             }
-                            RCAction newAction = existingAction.orElseGet(RCAction::new);
-                            newAction.setAction(actionRequest.getAction());
-                            newAction.setSlaveId(actionRequest.getSlaveId());
-                            newAction.setOutput(actionRequest.getOutput());
-                            newAction.setOrder(actionRequest.getOrder());
-                            newAction.setDuration(actionRequest.getDuration());
-                            newAction.setEvent(newEvent);
-                            actionsToUpdate.add(newAction);
+                            rcInput.getEvents().add(event);
                         }
-                        // удаление неиспользуемых экшенов
-                        List<RCAction> actionsToDelete = existingActions.stream()
-                                .filter(action -> actionsToUpdate.stream()
-                                        .noneMatch(r -> r.getOrder().equals(action.getOrder())))
-                                .collect(Collectors.toList());
-                        actionsToDelete.forEach(rcAction -> rcActionRepository.deleteRCAction(rcAction.getUuid()));
-
-                        newEvent.setActions(actionsToUpdate);
-                        // ACLs
-                        Set<RCAcl> existingAcls = existingEvent.map(RCEvent::getAcls).orElseGet(HashSet::new);
-                        Set<RCAcl> aclsToUpdate = new HashSet<>();
-                        Set<RCAcl> requestAcls = Optional.ofNullable(eventRequest.getAcls())
-                                .orElseGet(HashSet::new);
-                        for (RCAcl aclRequest : requestAcls) {
-                            Optional<RCAcl> existingAcl = existingAcls.stream()
-                                    .filter(acl -> acl.getCompareId().equals(aclRequest.getCompareId()))
-                                    .findFirst();
-                            // Может быть найдено действие, а может и нет
-                            // если нет то просто добавляем, если есть обновляем
-                            RCAcl newAcl = existingAcl.orElseGet(RCAcl::new);
-                            newAcl.setEvent(newEvent);
-                            newAcl.setState(aclRequest.getState());
-                            newAcl.setIo(aclRequest.getIo());
-                            newAcl.setId(aclRequest.getId());
-                            newAcl.setType(aclRequest.getType());
-                            aclsToUpdate.add(newAcl);
-                        }
-                        // Удаление неиспользуемых ACL
-                        Set<RCAcl> aclsToDelete = existingAcls.stream()
-                                .filter(acl -> aclsToUpdate.stream()
-                                        .noneMatch(r -> r.getCompareId().equals(acl.getCompareId())))
-                                .collect(Collectors.toSet());
-                        aclsToDelete.forEach(rcAcl -> rcAclRepository.deleteRCAcl(rcAcl.getUuid()));
-
-                        newEvent.setAcls(aclsToUpdate);
                     }
-                    eventsToUpdate.add(newEvent);
+                } else {
+                    logger.info("Input {} events not changed", rcInput.getName());
                 }
-
-                // Удаление лишних событий у входа
-                List<RCEvent> eventsToDelete = existingEvents.stream()
-                        .filter(event -> eventsToUpdate.stream()
-                                .noneMatch(r -> r.getEvent().equals(event.getEvent())))
-                        .collect(Collectors.toList());
-
-                rcEventRepository.deleteAll(eventsToDelete);
-                eventsToDelete.forEach(rcEvent -> rcEventRepository.deleteEvent(rcEvent.getUuid()));
-                rcInput.setEvents(eventsToUpdate);
                 inputRepository.save(rcInput);
+            } else {
+                return "Input not found";
             }
         } catch (Exception e) {
             logger.error("Error while update input", e);
@@ -388,160 +571,35 @@ public class RelayControllerService {
     }
 
 
-    /*
-    * public boolean updateInput(RCUpdateInput rcUpdateInput) {
-        boolean result = false;
-        RelayController controller = relayControllerRepository.findByMac(rcUpdateInput.getMac());
-        if (controller != null) {
-            //RCInput rcInput = inputRepository.findInput(controller.getUuid(), rcUpdateInput.getId());
-            RCInput rcInput = inputRepository.getReferenceById(rcUpdateInput.getUuid());
-            try {
-                if (rcInput != null) {
-                    if (rcUpdateInput.getName() != null)
-                        rcInput.setName(rcUpdateInput.getName());
-                    if (rcUpdateInput.getType() != null)
-                        rcInput.setType(rcUpdateInput.getType());
-
-                    // Обработка событий
-                    List<RCEvent> existingEvents = rcInput.getEvents();
-                    List<RCEvent> eventsToUpdate = new ArrayList<>();
-
-                    // идем по событиям из запроса
-                    for (RCEvent eventRequest : rcUpdateInput.getEvents()) {
-                        Optional<RCEvent> existingEvent = existingEvents.stream()
-                                .filter(event -> event.getEvent().equals(eventRequest.getEvent()))
-                                .findFirst();
-
-                        RCEvent newEvent = existingEvent.orElseGet(RCEvent::new);
-                        newEvent.setInput(rcInput);
-                        if (existingEvent.isEmpty()) {
-                            // новое событие (ранее не было), значит ВСЕ дочерние элементы нужно просто добавить
-                            newEvent.setEvent(eventRequest.getEvent());
-                            List<RCAction> actionsToInsert = new ArrayList<>();
-                            for (RCAction actionRequest : eventRequest.getActions()) {
-                                // fix
-                                if (((actionRequest.getOutput() == null) || (actionRequest.getSlaveId() == null)) &&
-                                    (actionRequest.getOutputID() != null)) {
-                                    String outputID = actionRequest.getOutputID();
-                                    Pattern pattern = Pattern.compile("s(\\d+)o(\\d+)");
-                                    Matcher matcher = pattern.matcher(outputID);
-                                    if (matcher.matches()) {
-                                        actionRequest.setSlaveId(Integer.parseInt(matcher.group(1)));
-                                        actionRequest.setOutput(Integer.parseInt(matcher.group(2)));
-                                    }
-                                }
-                                RCAction newAction = new RCAction();
-                                newAction.setAction(actionRequest.getAction());
-                                newAction.setSlaveId(actionRequest.getSlaveId());
-                                newAction.setOutput(actionRequest.getOutput());
-                                newAction.setDuration(actionRequest.getDuration());
-                                newAction.setOrder(actionRequest.getOrder());
-                                newAction.setEvent(newEvent);
-                                actionsToInsert.add(newAction);
-                            }
-                            if (eventRequest.getAcls() != null) {
-                                List<RCAcl> aclsToInsert = new ArrayList<>();
-                                for (RCAcl aclRequest : eventRequest.getAcls()) {
-                                    RCAcl newAcl = new RCAcl();
-                                    newAcl.setId(aclRequest.getId());
-                                    newAcl.setIo(aclRequest.getIo());
-                                    newAcl.setState(aclRequest.getState());
-                                    newAcl.setType(aclRequest.getType());
-                                    newAcl.setEvent(newEvent);
-                                    aclsToInsert.add(newAcl);
-                                }
-                                newEvent.setAcls(aclsToInsert);
-                            }
-                            newEvent.setActions(actionsToInsert);
-
-
-                        } else {
-                            // существующее событие, придется сравнивать экшены и асл
-                            // сравниваем экшены. Сначала добавляем новые экшены
-                            List<RCAction> existingActions = existingEvent.get().getActions();
-                            List<RCAction> actionsToUpdate = new ArrayList<>();
-                            for (RCAction actionRequest : eventRequest.getActions()) {
-                                Optional<RCAction> existingAction = existingActions.stream()
-                                        .filter(action -> action.getOrder().equals(actionRequest.getOrder()))
-                                        .findFirst();
-                                // Может быть найдено действие, а может и нет
-                                // если нет то просто добавляем, если есть обновляем
-                                RCAction newAction = existingAction.orElseGet(RCAction::new);
-                                newAction.setAction(actionRequest.getAction());
-                                newAction.setSlaveId(actionRequest.getSlaveId());
-                                newAction.setOutput(actionRequest.getOutput());
-                                newAction.setOrder(actionRequest.getOrder());
-                                newAction.setDuration(actionRequest.getDuration());
-                                newAction.setEvent(newEvent);
-                                actionsToUpdate.add(newAction);
-                            }
-                            // удаление неиспользуемых экшенов
-                            List<RCAction> actionsToDelete = existingActions.stream()
-                                    .filter(action -> actionsToUpdate.stream()
-                                            .noneMatch(r -> r.getOrder().equals(action.getOrder())))
-                                    .collect(Collectors.toList());
-                            actionsToDelete.forEach(rcAction -> rcActionRepository.deleteRCAction(rcAction.getUuid()));
-
-                            newEvent.setActions(actionsToUpdate);
-                            // ACLs
-                            List<RCAcl> existingAcls = existingEvent.map(RCEvent::getAcls).orElseGet(ArrayList::new);
-                            List<RCAcl> aclsToUpdate = new ArrayList<>();
-                            List<RCAcl> requestAcls = Optional.ofNullable(eventRequest.getAcls())
-                                    .orElseGet(ArrayList::new);
-                            for (RCAcl aclRequest : requestAcls) {
-                                Optional<RCAcl> existingAcl = existingAcls.stream()
-                                        .filter(acl -> acl.getCompareId().equals(aclRequest.getCompareId()))
-                                        .findFirst();
-                                // Может быть найдено действие, а может и нет
-                                // если нет то просто добавляем, если есть обновляем
-                                RCAcl newAcl = existingAcl.orElseGet(RCAcl::new);
-                                newAcl.setEvent(newEvent);
-                                newAcl.setState(aclRequest.getState());
-                                newAcl.setIo(aclRequest.getIo());
-                                newAcl.setId(aclRequest.getId());
-                                newAcl.setType(aclRequest.getType());
-                                aclsToUpdate.add(newAcl);
-                            }
-                            // Удаление неиспользуемых ACL
-                            List<RCAcl> aclsToDelete = existingAcls.stream()
-                                    .filter(acl -> aclsToUpdate.stream()
-                                            .noneMatch(r -> r.getCompareId().equals(acl.getCompareId())))
-                                    .toList();
-                            aclsToDelete.forEach(rcAcl -> rcAclRepository.deleteRCAcl(rcAcl.getUuid()));
-
-                            newEvent.setAcls(aclsToUpdate);
-                        }
-                        eventsToUpdate.add(newEvent);
-                    }
-
-                    // Удаление лишних событий у входа
-                    List<RCEvent> eventsToDelete = existingEvents.stream()
-                            .filter(event -> eventsToUpdate.stream()
-                                    .noneMatch(r -> r.getEvent().equals(event.getEvent())))
-                            .collect(Collectors.toList());
-
-                    rcEventRepository.deleteAll(eventsToDelete);
-                    eventsToDelete.forEach(rcEvent -> rcEventRepository.deleteEvent(rcEvent.getUuid()));
-                    rcInput.setEvents(eventsToUpdate);
-                    inputRepository.save(rcInput);
-                }
-                result = true;
-            } catch (Exception e) {
-                logger.error(e.getLocalizedMessage());
-            }
-        }
-        return result;
+    private RCAction getActionFromDto(RCActionDTO actionDto) {
+        RCAction action = new RCAction();
+        action.setOutput(outputRepository.getReferenceById(actionDto.getOutputUuid()));
+        action.setOrder(actionDto.getOrder());
+//        action.setSlaveId(actionDto.getSlaveId());
+//        action.setOutput(actionDto.getOutput());
+        action.setAction(actionDto.getAction());
+        action.setDuration(actionDto.getDuration());
+        return action;
     }
-    * */
 
-    public String getDeviceActionMessage(Integer output, String action, Integer slaveId) {
+    private static RCAcl getAclFromDto(RCAclDTO aclDto) {
+        RCAcl acl = new RCAcl();
+        acl.setType(aclDto.getType());
+        acl.setId(aclDto.getId());
+        acl.setIo(aclDto.getIo());
+        acl.setState(aclDto.getState());
+        return acl;
+    }
+
+    public String getDeviceActionMessage(RCOutput output, String action) {
+        // for alice
         Map<String, Object> objectMap = new HashMap<>();
         objectMap.put("type", "ACTION");
         objectMap.put("payload", new HashMap<String, Object>() {{
-            put("output", output);
+            put("output", output.getId());
             put("action", action);
-            if (slaveId > 0)
-                put("slaveId", slaveId);
+            if (output.getSlaveId() > 0)
+                put("slaveId", output.getSlaveId());
         }});
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -549,10 +607,21 @@ public class RelayControllerService {
             logger.info(json);
             return json;
         } catch (JsonProcessingException e) {
-            //throw new RuntimeException(e);
+            logger.error(e.getLocalizedMessage());
         }
         return "{}";
     }
 
+    @Transactional
+    public String getIOStates(String mac) {
+        RelayController relayController = relayControllerRepository.findByMac(mac);
+        if (relayController == null)
+            return "{}";
+        RCUpdateIODTO rcUpdateIODTO = relayControllerMapper.getRCStates(relayController);
 
-}
+        Map<String, Object> objectMap = new HashMap<>();
+        objectMap.put("type", "UPDATE");
+        objectMap.put("payload", rcUpdateIODTO);
+        return Utils.getJson(objectMap);
+    }
+ }

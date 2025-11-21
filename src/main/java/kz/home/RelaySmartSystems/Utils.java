@@ -3,10 +3,13 @@ package kz.home.RelaySmartSystems;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 public class Utils {
     public static String removeFieldsJSON(String json, String... fieldsToRemove) {
@@ -39,5 +42,23 @@ public class Utils {
                 removeFieldsRecursive(item, fieldsToRemove);
             }
         }
+    }
+
+    public static String getJson(Object object) {
+        String json;
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+        try {
+            json = objectMapper.writeValueAsString(object);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return json;
+    }
+
+    public static long getCRC(Object object) {
+        CRC32 crc = new CRC32();
+        crc.update(getJson(object).getBytes(StandardCharsets.UTF_8));
+        return crc.getValue();
     }
 }
