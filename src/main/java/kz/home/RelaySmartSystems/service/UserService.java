@@ -21,12 +21,6 @@ public class UserService {
     public User findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
-//    public Optional<User> findById(String id) {
-//        return userRepository.findById(id);
-//    }
-
-
-
 
     public User addUser(String username, String firstname, String lastname) {
         User user = new User();
@@ -34,5 +28,9 @@ public class UserService {
         user.setFirstName(firstname);
         user.setLastName(lastname);
         return userRepository.save(user);
+    }
+
+    public void saveUser(User user) {
+        userRepository.save(user);
     }
 }

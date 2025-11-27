@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.Map;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -21,5 +22,5 @@ public class RCConfigDTO {
     private long crc;
     private String username;
     private Date lastSeen;
-    private String hwParams;
+    private Map<String, Object> hwParams;
 }

@@ -35,7 +35,9 @@ public class RelayControllerService {
     private final RCSchedulerRepository rcSchedulerRepository;
     private final RCMqttMapper rcMqttMapper;
     private final RCMqttRepository rcMqttRepository;
+    private final ControllerService controllerService;
     private static final Logger logger = LoggerFactory.getLogger(RelayControllerService.class);
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
                                   RCOutputRepository outputRepository,
@@ -68,6 +70,7 @@ public class RelayControllerService {
         this.rcSchedulerRepository = rcSchedulerRepository;
         this.rcMqttMapper = rcMqttMapper;
         this.rcMqttRepository = rcMqttRepository;
+        this.controllerService = controllerService;
     }
 
     @Transactional
@@ -108,6 +111,7 @@ public class RelayControllerService {
                 o.setState(state);
                 outputRepository.save(o);
             }
+            controllerService.updateLastSeen(c.getUuid());
         }
     }
 
@@ -128,7 +132,12 @@ public class RelayControllerService {
         if (relayController != null) {
             relayController.setName(rcConfigDTO.getName());
             relayController.setDescription(rcConfigDTO.getDescription());
-            relayController.setHwParams(rcConfigDTO.getHwParams());
+            //relayController.setHwParams((String)rcConfigDTO.getHwParams());
+            try {
+                String json = mapper.writeValueAsString(rcConfigDTO.getHwParams());
+                relayController.setHwParams(json);
+            } catch (Exception ignored) {
+            }
         } else {
             return "NOT_FOUND";
         }

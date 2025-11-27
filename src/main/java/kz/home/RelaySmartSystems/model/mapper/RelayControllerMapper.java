@@ -1,21 +1,20 @@
 package kz.home.RelaySmartSystems.model.mapper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.dto.*;
 import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
-import kz.home.RelaySmartSystems.repository.RCOutputRepository;
 import org.apache.commons.beanutils.BeanUtils;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class RelayControllerMapper {
+    private final ObjectMapper mapper = new ObjectMapper();
+
     private RCActionDTO mapAction(RCAction action) {
         return new RCActionDTO(
                 action.getUuid(),
@@ -114,7 +113,12 @@ public class RelayControllerMapper {
         relayController.setModel(rcConfigDTO.getModel());
         relayController.setType("relayController");
         relayController.setCrc(rcConfigDTO.getCrc());
-        relayController.setHwParams(rcConfigDTO.getHwParams());
+        //relayController.setHwParams(Utils.getJson(rcConfigDTO.getHwParams()));
+        try {
+            String json = mapper.writeValueAsString(rcConfigDTO.getHwParams());
+            relayController.setHwParams(json);
+        } catch (Exception ignored) {
+        }
 
         // outputs
         List<RCOutput> outputs = new ArrayList<>();
@@ -190,24 +194,24 @@ public class RelayControllerMapper {
     public RCUpdateIODTO getRCStates(RelayController relayController) {
         RCUpdateIODTO rcUpdateIODTO = new RCUpdateIODTO();
         rcUpdateIODTO.setMac(relayController.getMac());
-        List<RCUpdateIODTO.RCState> rcStates = new ArrayList<>();
+        List<RCUpdateIODTO.RCState> rcOutputStates = new ArrayList<>();
         for (RCOutput rcOutput : relayController.getOutputs()) {
             RCUpdateIODTO.RCState rcState = new RCUpdateIODTO.RCState();
             rcState.setState(rcOutput.getState());
             rcState.setId(rcOutput.getId());
             rcState.setSlaveId(rcOutput.getSlaveId());
-            rcStates.add(rcState);
+            rcOutputStates.add(rcState);
         }
-        rcUpdateIODTO.setOutputs(rcStates);
-        rcStates.clear();
+        rcUpdateIODTO.setOutputs(rcOutputStates);
+        List<RCUpdateIODTO.RCState> rcInputStates = new ArrayList<>();
         for (RCInput rcInput : relayController.getInputs()) {
             RCUpdateIODTO.RCState rcState = new RCUpdateIODTO.RCState();
             rcState.setState(rcInput.getState());
             rcState.setId(rcInput.getId());
             rcState.setSlaveId(rcInput.getSlaveId());
-            rcStates.add(rcState);
+            rcInputStates.add(rcState);
         }
-        rcUpdateIODTO.setInputs(rcStates);
+        rcUpdateIODTO.setInputs(rcInputStates);
         return rcUpdateIODTO;
     }
 

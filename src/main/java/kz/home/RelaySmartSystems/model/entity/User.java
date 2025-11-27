@@ -6,7 +6,9 @@ import kz.home.RelaySmartSystems.model.Role;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
 
+import java.util.Date;
 import java.util.UUID;
 
 @Entity
@@ -23,12 +25,13 @@ public class User {
     String firstName;
     String lastName;
     Role role = Role.ROLE_USER;
+    @CreatedDate
+    Date registrationDate;
 
     public String getFio() {
         return this.firstName + " " + this.lastName;
     }
 
-    //@Override
     public boolean equals(User u) {
         if (u == null || username == null) {
             return false;

@@ -1,5 +1,7 @@
 package kz.home.RelaySmartSystems.model.mapper;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kz.home.RelaySmartSystems.model.entity.NetworkConfig;
 import kz.home.RelaySmartSystems.model.dto.*;
 import kz.home.RelaySmartSystems.model.entity.relaycontroller.*;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class RCConfigMapper {
@@ -16,6 +19,7 @@ public class RCConfigMapper {
     private final RCModbusConfigRepository modbusConfigRepository;
     private final RCSchedulerMapper rcSchedulerMapper;
     private final RCMqttMapper rcMqttMapper;
+    private final ObjectMapper mapper = new ObjectMapper();
     public RCConfigMapper(RelayControllerMapper relayControllerMapper,
                           RCModbusConfigRepository modbusConfigRepository,
                           RCSchedulerMapper rcSchedulerMapper,
@@ -94,7 +98,15 @@ public class RCConfigMapper {
         rcConfigDTO.setModel(controller.getModel());
         rcConfigDTO.setStatus(controller.getStatus());
         rcConfigDTO.setLastSeen(controller.getLastSeen());
-        rcConfigDTO.setHwParams(controller.getHwParams());
+        //rcConfigDTO.setHwParams(controller.getHwParams());
+        try {
+            Map<String, Object> map = mapper.readValue(
+                    controller.getHwParams(),
+                    new TypeReference<Map<String, Object>>() {}
+            );
+            rcConfigDTO.setHwParams(map);
+        } catch (Exception ignored) {
+        }
         // io
         RCIOConfigDTO rcioConfigDTO = new RCIOConfigDTO();
         rcioConfigDTO.setOutputs(relayControllerMapper.outputsToDTO(controller.getOutputs()));

@@ -23,8 +23,6 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -173,6 +171,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
                 break;
 
+            case "USERDEVICES":
+                if ("web".equalsIgnoreCase(wsSession.getType())) {
+                    List<Object> devices = controllerService.getUserDevices(wsSession.getUser());
+                    wsSession.sendMessage(new TextMessage(message("USERDEVICES", devices)));
+                    logger.info("user devices sent to {}", wsSession.getUser().getUsername());
+                }
+                break;
+
             case "DEVICECONFIG":
                 // получение конфига от контроллера или фронта
                 RCConfigDTO rcConfigDTO = objectMapper.readValue(json, RCConfigDTO.class);
@@ -243,6 +249,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 // проверить линковку {"type":"UPDATE","payload":{"mac":"C8F09E311008","input":16,"state":"long"}}
                 if ("relayController".equalsIgnoreCase(wsSession.getType())) {
                     RCUpdateDTO update = objectMapper.readValue(json, RCUpdateDTO.class);
+                    controllerService.setControllerOnline(update.getMac());
                     if (update.getOutput() != null) {
                         relayControllerService.setOutputState(wsSession.getControllerId(), update.getOutput(), update.getState(), update.getSlaveId());
                     } else if (update.getInput() != null) {
@@ -280,7 +287,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         logger.debug("Sending message {} to controller {}", actionDTO.getAction(), actionDTO.getMac());
                         sendMessageToController(actionDTO.getMac(), wsTextMessage.makeMessage());
                     } else {
-                        logger.debug("Action message to {} with incorrect owner {}", actionDTO.getMac(), wsSession.getUser().getUsername());
+                        logger.debug("Action message to {} with incorrect owner {}", actionDTO.getMac(), wsSession.getUser() != null ? wsSession.getUser().getUsername() : "no_user");
                     }
                 }
                 break;
@@ -576,6 +583,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Scheduled(fixedRate = 20000)
     private void serviceTask() {
-        controllerService.setOffline();
+        controllerService.setInactiveOffline();
     }
 }
