@@ -20,10 +20,10 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     UUID uuid;
-
     String username;
     String firstName;
     String lastName;
+    String email;
     Role role = Role.ROLE_USER;
     @CreatedDate
     Date registrationDate;

@@ -35,7 +35,9 @@ public class RCInputDTO {
         this.uuid = uuid;
         this.id = id;
         this.name = name;
-        this.type = type;
+        this.type = type == null ? "SW" : type;
+        if (this.id > 15)
+            this.type = "BTN";
         this.state = state;
         this.events = events;
         this.slaveId = slaveId;

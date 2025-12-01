@@ -53,7 +53,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handlePongMessage(WebSocketSession session, PongMessage message) throws Exception {
         //sessionService.updateLastActive(session.getId());
-        logger.info("pong message {}", message.getPayload());
+        logger.debug("pong message {}", message.getPayload());
         super.handlePongMessage(session, message);
     }
 
@@ -120,11 +120,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     break;
                 }
                 wsSession.setType(hello.getType());
-                // TODO : убрать после теста
-                if (hello.getType().equalsIgnoreCase("WEB1"))
-                    wsSession.setType("WEB");
-                else if (hello.getType().equalsIgnoreCase("RC1"))
-                    wsSession.setType("relayController");
 
                 if (tokenData.getMac() != null) {
                     // Это контроллер
@@ -175,7 +170,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 if ("web".equalsIgnoreCase(wsSession.getType())) {
                     List<Object> devices = controllerService.getUserDevices(wsSession.getUser());
                     wsSession.sendMessage(new TextMessage(message("USERDEVICES", devices)));
-                    logger.info("user devices sent to {}", wsSession.getUser().getUsername());
+                    logger.debug("user devices sent to {}", wsSession.getUser().getUsername());
                 }
                 break;
 
@@ -379,7 +374,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         if (isControllerOnline(command.getMac())) {
 //                          // make config and send to controller
                             String deviceConfig = relayControllerService.makeDeviceConfig(command.getMac());
-//                          logger.info(deviceConfig);
                             if (!"{}".equalsIgnoreCase(deviceConfig)) {
                                 res = sendMessageToController(command.getMac(), deviceConfig);
                                 logger.info("sendMessageToController {}", res);
@@ -394,8 +388,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         } else {
                             wsSession.sendMessage(new TextMessage(errorMessage("Controller offline")));
                         }
-                    } else if ("TEST".equalsIgnoreCase(command.getCommand())) {
-                        wsSession.sendMessage(new TextMessage(successMessage("Test ok")));
                     } else if ("DELETE".equalsIgnoreCase(command.getCommand())) {
                         res = controllerService.deleteController(command.getMac());
                         if ("OK".equalsIgnoreCase(res)) {

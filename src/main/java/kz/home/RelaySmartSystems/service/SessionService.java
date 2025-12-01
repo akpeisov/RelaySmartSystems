@@ -6,6 +6,7 @@ import kz.home.RelaySmartSystems.repository.SessionMessageRepository;
 import kz.home.RelaySmartSystems.repository.SessionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,6 +14,8 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final SessionMessageRepository sessionMessageRepository;
     private static final Logger logger = LoggerFactory.getLogger(SessionService.class);
+    @Value("${audit.logMessages}")
+    private boolean enableLog;
 
     public SessionService(SessionRepository sessionRepository,
                           SessionMessageRepository sessionMessageRepository) {
@@ -71,7 +74,7 @@ public class SessionService {
     }
 
     public void storeMessage(String sessionId, String message) {
-        if (message == null) {
+        if (message == null || !enableLog) {
             return;
         }
         Session session = sessionRepository.findSessionIdBySessionId(sessionId);

@@ -23,9 +23,6 @@ public class RelayControllerService {
     private final RelayControllerRepository relayControllerRepository;
     private final RCOutputRepository outputRepository;
     private final RCInputRepository inputRepository;
-    private final RCEventRepository rcEventRepository;
-    private final RCActionRepository rcActionRepository;
-    private final RCAclRepository rcAclRepository;
     private final RCModbusConfigRepository rcModbusConfigRepository;
     private final RelayControllerMapper relayControllerMapper;
     private final NetworkConfigMapper networkConfigMapper;
@@ -42,9 +39,6 @@ public class RelayControllerService {
     public RelayControllerService(RelayControllerRepository relayControllerRepository,
                                   RCOutputRepository outputRepository,
                                   RCInputRepository inputRepository,
-                                  RCEventRepository rcEventRepository,
-                                  RCActionRepository rcActionRepository,
-                                  RCAclRepository rcAclRepository,
                                   RCModbusConfigRepository rcModbusConfigRepository,
                                   ControllerService controllerService,
                                   RelayControllerMapper relayControllerMapper,
@@ -58,9 +52,6 @@ public class RelayControllerService {
         this.relayControllerRepository = relayControllerRepository;
         this.outputRepository = outputRepository;
         this.inputRepository = inputRepository;
-        this.rcEventRepository = rcEventRepository;
-        this.rcActionRepository = rcActionRepository;
-        this.rcAclRepository = rcAclRepository;
         this.rcModbusConfigRepository = rcModbusConfigRepository;
         this.relayControllerMapper = relayControllerMapper;
         this.networkConfigMapper = networkConfigMapper;

@@ -41,7 +41,7 @@ public class RCOutputDTO {
         this.id = id;
         this.name = name;
         this.limit = limit;
-        this.type = type;
+        this.type = type == null ? "s" : type;
         this._default = _default;
         this.state = state;
         this.alice = alice;

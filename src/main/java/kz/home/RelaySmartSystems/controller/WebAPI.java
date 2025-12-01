@@ -1,11 +1,6 @@
 package kz.home.RelaySmartSystems.controller;
 
-import kz.home.RelaySmartSystems.model.Role;
-import kz.home.RelaySmartSystems.model.entity.Controller;
 import kz.home.RelaySmartSystems.model.entity.User;
-import kz.home.RelaySmartSystems.model.mapper.RCConfigMapper;
-import kz.home.RelaySmartSystems.model.entity.relaycontroller.RelayController;
-import kz.home.RelaySmartSystems.service.ControllerService;
 import kz.home.RelaySmartSystems.service.UserService;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,10 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -28,18 +21,13 @@ import java.util.Map;
 public class WebAPI {
     private static final Logger logger = LoggerFactory.getLogger(WebAPI.class);
     private final UserService userService;
-    private final ControllerService controllerService;
-    private final RCConfigMapper rcConfigMapper;
     @Value("${env}")
     private String env;
     @Value("${keycloak.secret}")
     String keycloakSecret;
-    public WebAPI(UserService userService,
-                  ControllerService controllerService,
-                  RCConfigMapper rcConfigMapper) {
+    public WebAPI(UserService userService
+                  ) {
         this.userService = userService;
-        this.controllerService = controllerService;
-        this.rcConfigMapper = rcConfigMapper;
     }
 
     @Data
@@ -86,34 +74,34 @@ public class WebAPI {
             default:
                 logger.info("Received Keycloak event of type: {} for userId: {}", eventType, event.getUserId());
         }
-
         return ResponseEntity.ok().build();
     }
 
     private void handleRegistration(KeycloakEvent event) {
         String username = event.getDetails().get("username");
         String email = event.getDetails().get("email");
-        String userId = event.getUserId();
+        UUID userId = UUID.fromString(event.getUserId());
         String firstname = event.getDetails().get("firstname");
         String lastname = event.getDetails().get("lastname");
         if (userService.findByUsername(username) != null) {
             logger.error("User with username {} already exists. Skipping creation.", username);
             return;
         }
-        userService.addUser(username, firstname, lastname);
+        userService.addUser(userId, username, firstname, lastname, email);
     }
 
     private void handleUpdate(KeycloakEvent event) {
         String username = event.getDetails().get("username");
         String email = event.getDetails().get("email");
-        String userId = event.getUserId();
+        UUID userId = UUID.fromString(event.getUserId());
         String firstname = event.getDetails().get("firstname");
         String lastname = event.getDetails().get("lastname");
-        User user = userService.findByUsername(username);
+        User user = userService.findByUuid(userId);
         if (user != null) {
             user.setUsername(username);
             user.setFirstName(firstname);
             user.setLastName(lastname);
+            user.setEmail(email);
             userService.saveUser(user);
         }
     }
